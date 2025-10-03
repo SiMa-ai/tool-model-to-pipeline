@@ -1,0 +1,60 @@
+# Copyright (c) 2025 SiMa.ai
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+import sima
+import yaml
+
+with open("project.yaml", "r") as file:
+    external_params = yaml.safe_load(file)
+
+reader = sima.VideoReader(external_params["source"])
+writer = sima.VideoWriter(
+    external_params["source"],
+    external_params["udp_host"],
+    external_params["port"],
+    reader.frame_width,
+    reader.frame_height,
+)
+model_params = external_params["Models"][0]
+session = sima.MLSoCSession(
+    model_params["targz"],
+    pipeline=external_params["pipeline"],
+    frame_width=reader.frame_width,
+    frame_height=reader.frame_height,
+)
+session.configure(model_params)
+
+while reader.isOpened():
+    ret, frame = reader.read()
+    if not ret:
+        continue
+    boxes = session.run_model(frame)
+    annotated_frame = sima.SimaBoxRender.render(
+        frame,
+        boxes,
+        reader.frame_width,
+        reader.frame_height,
+        model_params["label_file"],
+    )
+    writer.write(annotated_frame)

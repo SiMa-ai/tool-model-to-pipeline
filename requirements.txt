@@ -1,0 +1,8 @@
+loguru==0.7.3
+ultralytics==8.3.145
+typer==0.16.0
+rich
+paramiko
+scp
+pydantic
+numpy==1.23.5

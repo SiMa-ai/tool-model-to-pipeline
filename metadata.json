@@ -1,0 +1,26 @@
+{
+    "name": "tool_model_to_pipeline",
+    "version": "0.1.0",
+    "release": "stable",
+    "description": "SiMa.ai ONNX Model to Pipeline Conversion Tool",
+    "platforms": [
+        {
+            "type": "palette"
+        }
+        
+    ],
+    "resources": [
+        "gh:paconsultings/tool-model-to-pipeline"
+    ],
+    "selectable-resources":
+    [
+    ],
+    "size": {
+        "download": "72KB",
+        "install": "200KB"
+    },
+    "installation": {
+        "script": " cd tool-model-to-pipeline && ./install.sh",
+        "post-message": "[bold]Supported Yolo models:[/bold]\n- yolov8n, yolov8m, yolov8l\n- yolov9t, yolov9s, yolov9m, yolov9c\n- yolov10n, yolov10s, yolov10m, yolov10b, yolov10x\n- yolo11n, yolo11s, yolo11m, yolo11l\n\n[bold]Run pipeline creation (example with YOLOv9c):[/bold]\n\n[green]cd tool-model-to-pipeline\nsima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c.yaml[/green]\n"
+    }
+}

@@ -1,0 +1,23 @@
+# This is the template for peppi pipeline.
+# Data will be updated automatically
+source:
+  name: "rtspsrc"
+  value:
+udp_host:
+port:
+pipeline:
+
+Models:
+  - name:
+    targz:
+    label_file:
+    normalize: true
+    channel_mean:
+    channel_stddev:
+    padding_type: "CENTER"
+    aspect_ratio: true
+    topk: 25
+    detection_threshold: 0.2
+    nms_iou_threshold: 0.4
+    decode_type:
+    num_classes:

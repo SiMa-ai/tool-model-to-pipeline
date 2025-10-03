@@ -1,0 +1,107 @@
+# Name for the generated pipeline (user-defined)
+pipeline_name: YoloV9c
+
+# ---- Model configuration ----
+
+model_params:
+  # Path to the ONNX file. (If missing and it's a YOLO model, it will be auto-downloaded from Ultralytics)
+  model_path: yolov9c.onnx
+
+  # Base model name without the version suffix (e.g., n, s, m, c, l, x)
+  model_name: yolov9
+
+  # Optional: Path to the post-surgery model file. If empty, generated dynamically.
+  post_surgery_model_path:
+
+  # Model category (currently not used). Options: object-detection, image-classification, segmentation
+  model_type: object-detection
+
+  # ---- Input size for the model (if not set, defaults to the model’s original input shape) ----
+  input_width: 1280
+  input_height: 720
+
+# ---- Extra pipeline parameters ----
+extras:
+  # Use detessdequant plugin instead of the default simaaiboxdecoder
+  no_box_decode: false
+
+  # RTSP input stream (ignored for PCIe pipelines)
+  rtsp_src:
+
+  # Host settings for streaming back video (ignored for PCIe pipelines)
+  host_ip:
+  host_port:
+  input_resource:
+
+  # Detection thresholds
+  detection_threshold: 0.4   # Minimum confidence score
+  nms_iou_threshold: 0.4     # IOU threshold for non-max suppression
+  topk: 25                   # Keep top-k detections
+
+  # Labels for classes (optional: if labels file exists, this is ignored)
+  labels:
+  labels_file:
+  num_classes: 80
+
+# ---- Compilation parameters ----
+
+compilation_params:
+  # Directory to save compilation results
+  compilation_result_dir: result
+
+  # Compiler to use (e.g., yolo, resnet, etc.)
+  compiler: yolo
+
+  # Batch size for compilation
+  batch_size: 1
+
+  # Target device type (davinci, modalix)
+  device_type: modalix
+
+  # ---- Calibration settings (used during quantization) ----
+  calibration_params:
+    # Path (inside SDK container) to calibration dataset
+    calibration_data_path: /home/docker/sima-cli/val2017
+
+    # File extension of calibration images (jpg, jpeg, png, webp; mixed not supported)
+    calibration_ds_extn: jpg
+
+    # Number of calibration samples to use (if None, use all available)
+    calibration_samples_count: 100
+
+    # Calibration method. Options: min_max, moving_average, entropy, percentile, mse
+    calibration_type: min_max
+
+  # ---- Quantization settings ----
+  quant_config:
+    # Compile for ARM only (set true for Arm-only build)
+    arm_only: false
+
+    activation_quant_config:
+      # Activation quantization options
+      act_asym: false   # Asymmetric quantization
+      act_per_ch: false # Per-channel quantization
+      act_bf16: false   # Use BF16 precision
+      act_nbits: 8      # Bit precision (8 or 16)
+
+    weight_quant_config:
+      # Weight quantization options
+      wt_asym: false
+      wt_per_ch: false
+      wt_bf16: false
+      wt_nbits: 8       # Bit precision (8 or 16)
+
+    # Bias correction method: none, iterative, regular
+    bias_correction: none
+
+    # Apply channel equalization
+    ceq: false
+
+    # Apply SmoothQuant technique
+    smooth_quant: false
+
+    # Requantization mode: sima or tflite
+    mode: sima
+
+    # Apply model compression
+    compress: false
