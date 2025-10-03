@@ -1,3 +1,6 @@
 include README.md
 include requirements.txt
 include run_sample_pipeline/configs/*
+
+recursive-include model_to_pipeline/monitor/templates *
+recursive-include model_to_pipeline/monitor/static *
