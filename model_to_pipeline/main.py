@@ -42,6 +42,7 @@ from model_to_pipeline.utils.logger.logger import (
 )  # Assuming your logger setup is here
 from model_to_pipeline.steps.steps_base import StepMeta
 from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
+from model_to_pipeline.monitor.app import app, ServerThread
 
 
 model_to_pipeline_app = typer.Typer()
@@ -109,6 +110,11 @@ def main(args: argparse.Namespace) -> None:
     steps = list(StepMeta.registry.items())
     max_name_len = max(len(name) for name, _ in steps)
     results = []
+    monitor_server = None
+
+    if args.config_yaml:
+        monitor_server = ServerThread(app, port=5000, config_yaml=args.config_yaml)
+        monitor_server.start()
 
     with step_logger(step_name="setup", log_dir="logs"):
         logging.info(args)
@@ -117,10 +123,17 @@ def main(args: argparse.Namespace) -> None:
     for step_name, _ in steps:
         if args.step and args.step != step_name:
             continue
+
+        if monitor_server:
+            monitor_server.update_state(step_name, "started")
+
         start_time = time.time()
         success = run_step(step_name, args, console, max_name_len)
         elapsed = time.time() - start_time
         results.append((step_name, success, elapsed))
+
+        if monitor_server:
+            monitor_server.update_state(step_name, "success" if success else "fail")
 
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
@@ -146,6 +159,11 @@ def main(args: argparse.Namespace) -> None:
 
     console.print(table)
     console.print("\n[bold underline][/bold underline]")
+
+    if monitor_server:        
+        print("\n✅ Process completed, press any key to exit...")
+        input()
+        monitor_server.shutdown()
 
 
 @model_to_pipeline_app.command("model-to-pipeline")

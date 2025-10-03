@@ -1,0 +1,164 @@
+/* ================================
+   Global Styles
+================================ */
+body {
+  font-family: 'Roboto', sans-serif !important;
+  background: #f9f9f9;
+  padding: 30px;
+  text-align: center;
+  color: #333;
+}
+
+/* ================================
+   Progress Indicator
+================================ */
+.progress-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+  gap: 40px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid gray;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  background: #fff;
+  padding: 8px;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Specification step (always enabled, distinct blue glow) */
+.circle.specification {
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.7);
+  border-color: #0d6efd;
+}
+
+/* Disabled state */
+.step.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.step.disabled .circle {
+  background-color: #ccc !important;
+  box-shadow: none !important;
+}
+
+/* Default SVG styling inside circle */
+.circle svg path,
+.circle svg polygon {
+  fill: none;
+  stroke: black;
+  stroke-width: 2;
+}
+
+/* Step states */
+.step.in-progress .circle {
+  border-color: orange;
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.9);
+  animation: breathing 1.5s infinite;
+}
+.step.success .circle {
+  border-color: green;
+  box-shadow: 0 0 12px rgba(0, 200, 0, 0.9);
+}
+.step.fail .circle {
+  border-color: red;
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.9);
+}
+
+/* Step label text */
+.step p {
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 5px;
+  color: #333;
+}
+.step.active p {
+  color: #0d6efd; /* Bootstrap blue */
+  font-weight: 700;
+}
+
+/* ================================
+   Animations
+================================ */
+@keyframes breathing {
+  0%   { box-shadow: 0 0 5px rgba(255,165,0,0.6); }
+  50%  { box-shadow: 0 0 15px rgba(255,165,0,1); }
+  100% { box-shadow: 0 0 5px rgba(255,165,0,0.6); }
+}
+
+/* ================================
+   Content Panel
+================================ */
+.content-container {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  min-height: 150px;
+  width: 60%;
+  margin: 20px auto;
+  font-family: 'Roboto', sans-serif !important;
+}
+.content-container.logs {
+  width: 95% !important;
+  max-width: 1600px;
+}
+
+/* ================================
+   Tabs
+================================ */
+.nav-tabs .nav-link.active {
+  background-color: #0d6efd;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ================================
+   Tables
+================================ */
+table {
+  border: none !important;
+  font-family: 'Roboto', sans-serif !important;
+}
+.table td,
+.table th {
+  border: none !important;
+  font-size: 14px;
+  vertical-align: middle;
+}
+.table thead th {
+  font-weight: 500;
+}
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #fdfdfd;
+}
+.table-striped tbody tr:nth-of-type(even) {
+  background-color: #f3f6fa;
+}
+
+/* ================================
+   Inline Value Style
+================================ */
+.value-text {
+  font-family: 'Courier New', monospace !important;
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #222;
+  display: inline-block;
+}
