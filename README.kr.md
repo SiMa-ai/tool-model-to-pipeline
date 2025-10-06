@@ -1,24 +1,28 @@
-# SiMa.ai Model-to-Pipeline Toolkit 
+# SiMa.ai 모델-파이프라인 변환 툴킷
 
-[![SDK Compatibility](https://img.shields.io/badge/SDK-1.7.0-blue.svg)](#) 
-[![Models](https://img.shields.io/badge/Supported-YOLO-green.svg)](#) 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-orange.svg)](#) 
-[![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](../LICENSE) 
-[![한국어 문서](https://img.shields.io/badge/Docs-Korean-lightblue.svg)](README.kr.md) 
+[![SDK 호환성](https://img.shields.io/badge/SDK-1.7.0-blue.svg)](#)
+[![모델](https://img.shields.io/badge/지원-YOLO-green.svg)](#)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-orange.svg)](#)
+[![라이선스](https://img.shields.io/badge/License-MIT-lightgrey.svg)](../LICENSE)
+[![English Docs](https://img.shields.io/badge/Docs-English-lightblue.svg)](README.md)
 
-The **Model-to-Pipeline Tool** converts FP32 YOLO models into optimized GStreamer pipelines for the **SiMa.ai** platform. This guide is a step-by-step hands-on guide for customers to build and run an AI inference pipeline on SiMa.ai’s Modalix Edge AI platform using the Ultralytics YOLOv8m model as an example. By following this document, customers will experience the entire process in one go: setting up the SDK environment, converting the model, creating an mpk, and running it on Modalix. 
+**Model-to-Pipeline Tool**은 FP32 YOLO 모델을 **SiMa.ai** 플랫폼용 최적화된 GStreamer 파이프라인으로 변환합니다.
 
-### 📦 Installation
+이 가이드는 **Ultralytics YOLOv8m** 모델을 예시로 하여 SiMa.ai의 **Modalix Edge AI 플랫폼**에서 AI 추론 파이프라인을 직접 구축하고 실행하는 단계별 실습 안내서입니다.  이 문서를 따라가면 SDK 환경 설정부터 모델 변환, MPK 생성, Modalix에서의 실행까지 전 과정을 한 번에 체험할 수 있습니다.
 
-See [Installation Guide](docs/en/installation.md). 
+---
 
-### 🚀 Usage
+### 📦 설치
 
-- [Model-to-Pipeline](docs/en/usage/model-to-pipeline.md)
-- [Get-FPS](docs/en/usage/get-fps.md) 
-- [Infer](docs/en/usage/infer.md)
+[설치 가이드](docs/kr/installation.md)를 참고하세요.
 
-```sh
+### 🚀 사용 방법
+
+- [Model-to-Pipeline 실행](docs/kr/usage/model-to-pipeline.md)
+- [FPS 측정 (Get-FPS)](docs/kr/usage/get-fps.md)
+- [추론 실행 (Infer)](docs/kr/usage/infer.md)
+
+```
 $ sima-model-to-pipeline --help
 
  Usage: sima-model-to-pipeline [OPTIONS] COMMAND [ARGS]...
@@ -37,15 +41,3 @@ $ sima-model-to-pipeline --help
 ╰─────────────────────────────────────────────────────────────────────────╯
 ```
 
-### 🧠 Architecture & Design
-
-Learn how the tool works internally: 
-
-- [Project Overview](docs/en/architecture/overview.md) 
-- [Adding New Models](docs/en/architecture/add-model.md)
-- [Adding New Steps](docs/en/architecture/add-step.md)
-- [Adding New Tools](docs/en/architecture/add-tool.md) 
- 
-### 🧾 Logs 
-
-See [Logs Overview](logs.md)
