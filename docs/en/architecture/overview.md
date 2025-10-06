@@ -22,8 +22,8 @@ The tool is designed with a modular, plugin-based architecture.
 To add support for new models, simply create the corresponding plugin modules — no modification of existing source files is required.
 
 For example:
-- Add a new compiler under [`compilers`](../../../model_to_pipeline/compilers/README.md)
-- Add a new step under [`steps`](../../../model_to_pipeline/steps/README.md)
-- Extend utilities under [`utils`](../../../model_to_pipeline/utils/README.md)
+- Add a new compiler under [`compilers`](../../../model_to_pipeline/compilers)
+- Add a new step under [`steps`](../../../model_to_pipeline/steps)
+- Extend utilities under [`utils`](../../../model_to_pipeline/utils)
 
 This approach ensures scalability and clean separation of functionality.
