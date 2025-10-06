@@ -16,7 +16,7 @@ model_params:
   # Model category (currently not used). Options: object-detection, image-classification, segmentation
   model_type: object-detection
 
-  # ---- Input size for the model (if not set, defaults to the model’s original input shape) ----
+  # ---- Input size ----
   input_width: 1280
   input_height: 720
 
@@ -63,13 +63,13 @@ compilation_params:
     # Path (inside SDK container) to calibration dataset
     calibration_data_path: /home/docker/sima-cli/val2017
 
-    # File extension of calibration images (jpg, jpeg, png, webp; mixed not supported)
+    # File extension of calibration images (`jpg`, `jpeg`, `png`, `webp`; mixed not supported)
     calibration_ds_extn: jpg
 
     # Number of calibration samples to use (if None, use all available)
     calibration_samples_count: 100
 
-    # Calibration method. Options: min_max, moving_average, entropy, percentile, mse
+    # Calibration method. Options: `min_max`, `moving_average`, `entropy`, `percentile`, `mse`
     calibration_type: min_max
 
   # ---- Quantization settings ----
@@ -91,7 +91,7 @@ compilation_params:
       wt_bf16: false
       wt_nbits: 8       # Bit precision (8 or 16)
 
-    # Bias correction method: none, iterative, regular
+    # Bias correction method: `none`, `iterative`, `regular`
     bias_correction: none
 
     # Apply channel equalization
@@ -100,7 +100,7 @@ compilation_params:
     # Apply SmoothQuant technique
     smooth_quant: false
 
-    # Requantization mode: sima or tflite
+    # Requantization mode: `sima` or `tflite`
     mode: sima
 
     # Apply model compression
