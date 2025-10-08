@@ -57,7 +57,7 @@ class StepDownloadModel(StepBase):
                 model = ultralytics.YOLO(
                     os.path.splitext(os.path.basename(args.model_path))[0]
                 )
-                model.export(format="onnx")
+                model.export(format="onnx", opset=13, simplify=False, dynamic=False, imgsz=640)
                 logging.info(
                     f"Model {args.model_name} downloaded successfully to {args.model_path}."
                 )
