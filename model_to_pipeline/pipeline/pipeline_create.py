@@ -402,6 +402,18 @@ class PipelineCreate(PipelineBase):
                 data.pop("output_width")
                 data.pop("output_height")
                 data.pop("output_depth")
+                delete_data = ["graph_name", "cpu", "next_cpu", "next_cpu", 'debug','node_name']
+                for d in delete_data:
+                    if d in data:
+                        logging.info(f"Deleting {d} from mla.json")
+                        del data[d]
+                delete_data = ["next_cpu"]
+                for d in delete_data:
+                    if d in data["simaai__params"]:
+                        logging.info(f"Deleting {d} from data['simaai__params'] mla.json")
+                        del data["simaai__params"][d]
+
+
 
                 # Reading sinkpad from boxdecoder.json to match with mla.json
                 with open(
@@ -453,6 +465,13 @@ class PipelineCreate(PipelineBase):
                     else preproc_config["output_width"]
                 )
 
+                logging.info("updating preproc.json with changes in the SDK-2.0")
+                # Remove the input_offset field
+                delete_data = ["input_offset","node_name"]
+                if data in delete_data:
+                    logging.info(f"Deleting {data} from preproc.json")
+                    del preproc_config[data]
+
                 model_input_height = preproc_config["output_height"]
                 model_input_width = preproc_config["output_width"]
 
@@ -501,6 +520,14 @@ class PipelineCreate(PipelineBase):
                 boxdecoder_data["topk"] = args.topk
                 boxdecoder_data["buffers"]["output"]["size"] = int(4 + 24 * args.topk)
                 boxdecoder_data["num_classes"] = args.num_classes
+
+                boxdecoder_data["batch_size"] = 1
+                boxdecoder_data["memory"]["next_cpu"] = 1
+                delete_data = ["graph_name", "cpu", "next_cpu", "EVXX_DBG_DISABLED", 'debug','channel_of_interest']
+                for data in delete_data:
+                    if data in boxdecoder_data:
+                        logging.info(f"Deleting {data} from box_decoder.json")
+                        del boxdecoder_data[data]
 
                 # If labels file is provided, read it and update boxdecoder.json
                 if args.labels_file:
