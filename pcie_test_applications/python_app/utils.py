@@ -47,11 +47,16 @@ def get_model_info(mpk_package):
     # Extract contents
     os.system("cd /tmp/sima_tmp/; unzip /tmp/sima_tmp/project.mpk")
     os.system("cd /tmp/sima_tmp/*/resources/; rpm2cpio installer.rpm | cpio -idmv")
-    os.system("cp /tmp/sima_tmp/*/resources/data/simaai/applications/*/etc/* /tmp/sima_tmp/")
+    # os.system("cp /tmp/sima_tmp/*/resources/data/simaai/applications/*/etc/* /tmp/sima_tmp/")
+    os.system("cp /tmp/sima_tmp/*/etc/* /tmp/sima_tmp/")
 
     # Read JSON file
-    with open("/tmp/sima_tmp/boxdecoder.json") as f:
-        mpk_json = json.load(f)
+    try:
+        with open("/tmp/sima_tmp/boxdecoder.json") as f:
+            mpk_json = json.load(f)
+    except Exception as e :
+        with open("/tmp/sima_tmp/boxdecode.json") as f:
+            mpk_json = json.load(f)
 
     # Get formatted labels
     labels = []
@@ -130,7 +135,7 @@ class Constants:
     INPUT_SHAPE           = [FRAME_WIDTH,FRAME_HEIGHT,3]
     OUTPUT_SHAPE	      = [580]
     IN_BUFFER_SIZE        = int(FRAME_HEIGHT * FRAME_WIDTH * 3)
-    OUT_BUFFER_SIZE       = int(580)*4
+    OUT_BUFFER_SIZE       = int(580)
     DUMP_OUTPUT           = True # Dump json output
     REMOVE_PROCESSED      = False # Remove processed images from input_dir (This must be True for production env)
     MIN_TIME_OUT          = 0.5 # Time out for RESET (Not in use)
@@ -397,7 +402,7 @@ class intf:
     def run_infer(self, model, frame, count):
         print("Allocating buffer of size ", Constants.OUT_BUFFER_SIZE)
         out_tensor = np.zeros([int(Constants.OUT_BUFFER_SIZE)], dtype=np.uint8)
-        logger.info("Sending frame to soc ")
+        logger.info("Sending frame to soc of size %s ", frame.nbytes)
         self.host_helper.memcpy(frame, 0)
         out = self.host_helper.run_inference(model)
         if(out != SiMaErrorCode.SUCCESS):

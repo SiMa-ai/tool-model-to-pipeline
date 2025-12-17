@@ -143,13 +143,14 @@ std::tuple<int, int, int, std::vector<std::string>> read_model_details(const std
 
         // Extract contents
         system("cd /tmp/sima_tmp/; unzip /tmp/sima_tmp/project.mpk");
-        system("cd /tmp/sima_tmp/*/resources/; rpm2cpio installer.rpm | cpio -idmv");
-        system("cp /tmp/sima_tmp/*/resources/data/simaai/applications/*/etc/* /tmp/sima_tmp/");
+        // system("cd /tmp/sima_tmp/*/resources/; rpm2cpio installer.rpm | cpio -idmv");
+        system("cp /tmp/sima_tmp/*/etc/* /tmp/sima_tmp/");
 
         // Read JSON file
         mpk_file.open("/tmp/sima_tmp/boxdecoder.json");
         if(!mpk_file.is_open()) {
             std::cerr << "Failed to find boxdecoder.json file" << std::endl;
+            // mpk_file.open("/tmp/sima_tmp/boxdecoder.json");
             return {0, 0, topk, labels};
         }
         reader.parse(mpk_file, mpk_json);
