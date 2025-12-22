@@ -153,9 +153,9 @@ info "  - Runtime (eLxr or Yocto): OK"
 info "Installing tool-model-to-pipeline into SDK containers"
 
 "$SIMA_CLI" sdk model \
-    "sima-cli install gh:sima-ai/tool-model-to-pipeline"
+    "sima-cli install gh:sima-ai/tool-model-to-pipeline@2.0_prep"
 
 "$SIMA_CLI" sdk mpk \
-    "sima-cli install gh:sima-ai/tool-model-to-pipeline"
+    "sima-cli install gh:sima-ai/tool-model-to-pipeline@2.0_prep"
 
 info "Installation completed successfully"
