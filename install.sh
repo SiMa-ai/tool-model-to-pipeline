@@ -85,7 +85,7 @@ fi
 if [[ "$IS_PALETTE" == "true" ]]; then
     info "Running inside Palette. Executing local install logic."
 
-    pip3 install .
+    pip3 install . --force-reinstall
 
     # Ensure ~/.local/bin is on PATH
     if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
