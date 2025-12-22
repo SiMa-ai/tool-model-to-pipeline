@@ -6,8 +6,11 @@
     "platforms": [
         {
             "type": "palette"
+        },
+        {
+            "type": "host", 
+            "os": ["windows", "linux"]
         }
-        
     ],
     "resources": [
         "gh:sima-ai/tool-model-to-pipeline"
