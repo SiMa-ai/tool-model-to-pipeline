@@ -79,7 +79,7 @@ compilation_params:
 
     activation_quant_config:
       # Activation quantization options
-      act_asym: false   # Asymmetric quantization
+      act_asym: true   # Asymmetric quantization
       act_per_ch: false # Per-channel quantization
       act_bf16: false   # Use BF16 precision
       act_nbits: 8      # Bit precision (8 or 16)
@@ -87,7 +87,7 @@ compilation_params:
     weight_quant_config:
       # Weight quantization options
       wt_asym: false
-      wt_per_ch: false
+      wt_per_ch: true
       wt_bf16: false
       wt_nbits: 8       # Bit precision (8 or 16)
 

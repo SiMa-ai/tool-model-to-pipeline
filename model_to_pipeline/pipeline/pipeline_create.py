@@ -622,7 +622,7 @@ class PipelineCreate(PipelineBase):
             "! tee name=source "
             "! 'video/x-raw' "
             f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
-            f"! simaaiprocessmla name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+            f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
             f"! simaaiboxdecode name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
             "! 'application/vnd.simaai.tensor' "
             "! overlay. source. "
@@ -635,11 +635,11 @@ class PipelineCreate(PipelineBase):
             ""
         )
         gst_cmd_pcie = (
-            f"simaaipciesrc buffer-size={args.input_width * args.input_height * 3} "
+            f"simaaipciesrc queue={args.qid} buffer-size={args.input_width * args.input_height * 3} "
             f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
-            f"! simaaiprocessmla name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+            f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
             f"{postproc_block}"
-            f"!  'application/vnd.simaai.tensor' ! simaaipciesink data-buffer-size={args.pcie_buffer_size}"
+            f"!  'application/vnd.simaai.tensor' ! simaaipciesink queue={args.qid} data-buffer-size={args.pcie_buffer_size}"
         )
         logging.info(f"GStreamer commands updated succesfully for pciesink buffer size. - {args.pcie_buffer_size}")
 

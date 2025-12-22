@@ -186,7 +186,8 @@ class CompileYoloGeneric(CompilerBase):
             quantization_config=quant_configs,
             model_name=args.model_name,
             arm_only=args.arm_only,
-            automatic_layout_conversion=False,
+            any_shape_on_mla=True,
+            automatic_layout_conversion=True,
             log_level=logging.DEBUG,
         )
 

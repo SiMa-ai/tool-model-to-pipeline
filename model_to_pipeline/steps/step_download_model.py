@@ -49,6 +49,20 @@ class StepDownloadModel(StepBase):
             bool: True if the Download Model was successful, False otherwise.
         """
         logging.info(f"Checking if model {args.model_path} is available or not.")
+        if '.pt' in args.model_path:
+            import ultralytics
+#            args.model_path
+            model = ultralytics.YOLO(
+                    args.model_path
+                )
+            model.export(format="onnx", opset=13)
+            logging.info(
+                    f"Model {args.model_name} exported to ONNX {args.model_path}."
+                )
+            args.model_path = args.model_path.replace('.pt', '.onnx')
+            logging.info(f"Exported to ONNX {args.model_path}")
+            return True
+
         if not Path(args.model_path).exists():
             logging.info(f"Model {args.model_path} not found. Downloading...")
             import ultralytics # type: ignore

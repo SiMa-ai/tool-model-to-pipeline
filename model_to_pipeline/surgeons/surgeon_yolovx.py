@@ -24,7 +24,6 @@
 import argparse
 import os
 import onnx
-from ev_transforms.transforms import resize
 from onnx import helper, numpy_helper
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 

@@ -120,12 +120,24 @@ def main(args: argparse.Namespace) -> None:
         logging.info(args)
         logging.info(f"Total number of steps: {len(steps)}")
 
-    for step_name, _ in steps:
+    is_model_sdk = False
+    try:
+        import afe
+        is_model_sdk = True
+        logging.info(f"model_sdk docker detected")
+    except Exception as e:
+        is_model_sdk = False
+        logging.info(f"mpk_cli docker detected")
+
+    # model_sdk_steps = ['downloadmodel','surgery']
+    mpk_cli_steps = ['pipelinecreate', 'mpkcreate']
+    for step_name, index in steps:
+        logging.info(f'step_name:{step_name}, index:{index}')
         if args.step and args.step != step_name:
             continue
-
-        if monitor_server:
-            monitor_server.update_state(step_name, "started")
+        if step_name in mpk_cli_steps and is_model_sdk:
+            logging.info(f'Skipping the {step_name}')
+            continue
 
         start_time = time.time()
         success = run_step(step_name, args, console, max_name_len)
@@ -171,6 +183,12 @@ def run(
     # Model args
     model_path: Optional[str] = typer.Option(
         None, help="Path to the model file to use."
+    ),
+    yocto: Optional[bool] = typer.Option(
+        False, help="enable this flag to build pipeline for yocto targets"
+    ),
+	qid: Optional[int] = typer.Option(
+        0, help="provide the queue_id to build multiple pipelines for PCIe based applications"
     ),
     model_name: Optional[str] = typer.Option(
         None,
@@ -328,6 +346,8 @@ def run(
 ) -> None:
     """Runs the tool to convert the model into a working pipeline"""
     args = argparse.Namespace()
+    args.yocto = yocto
+	args.qid = qid
     args.model_path = model_path
     args.model_name = model_name
     args.post_surgery_model_path = post_surgery_model_path
@@ -397,6 +417,10 @@ def run(
                 build_tables_from_yaml(config_yaml)
 
             args.pipeline_name = config_data.get("pipeline_name", "MyPipeline")
+
+            args.yocto = config_data.get("yocto", False)
+			
+			args.qid = config_data.get("qid",0)
             # Overriding model params
             args.model_path = config_data.get("model_params", {}).get(
                 "model_path", model_path

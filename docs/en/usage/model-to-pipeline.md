@@ -1,5 +1,126 @@
 ## model-to-pipeline
 
+We need to run this model-to-pipeline twice, 
+
+Once in the model docker for the Model-Download, Graph-Surgery and Compilation process
+
+Second time for the pipeline creation and mpk creation process.
+
+To-do this we can create a .sima script to execute the model-to-pipeline from Host-pc
+
+
+```sh
+host-pc$ cat build_model.sima
+
+# build-model.sima
+    echo "Starting Pipeline building process..."
+    model 
+	{
+            mkdir /home/docker/sima-cli/build_yolov8n || \
+            cd /home/docker/sima-cli/build_yolov8n \
+            && sima-model-to-pipeline model-to-pipeline \
+            --model-path yolov8n.onnx \
+            --model-name yolov8 \
+            --pipeline-name yolov8n \
+            --host-ip 172.16.1.20 \
+            --host-port 5000 \
+            --input-width 1280 \
+            --input-height 720 \
+            --device-type modalix \
+            --rtsp-src "rtsp://192.168.132.205/axis-media/media.amp"
+            
+      }
+
+    mpk 
+	{
+            cd /home/docker/sima-cli/build_yolov8n \
+            && sima-model-to-pipeline model-to-pipeline \
+            --model-path yolov8n.onnx \
+            --model-name yolov8 \
+            --pipeline-name yolov8n \
+            --host-ip 172.16.1.20 \
+            --host-port 5000 \
+            --input-width 1280 \
+            --input-height 720 \
+            --device-type modalix \
+            --rtsp-src "rtsp://192.168.132.205/axis-media/media.amp"
+      }
+
+    echo "✅ All done!"
+
+```
+### Executed the sima-cli sdk run command from the host-pc
+```sh
+host-pc$ sima-cli sdk run build_model.sima
+```
+
+## Or Run the model-to-pipeline command in both docker in the same path.
+
+```sh
+$ sima-cli sdk model
+✅ sima-cli is up-to-date
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+▶ Executing command in container: jfrog-443-modelsdk-2.0.0_palette_sdk_master_b240
+=============================================================
+ 🚀 Welcome to the ModelSDK Container 
+ 
+ ⚠️  IMPORTANT NOTICE:
+ Please keep all your work in the mounted path:
+     /home/docker/sima-cli 
+ to avoid losing files if the container is removed accidentally.
+=============================================================
+sima@jfrog-443-modelsdk-2:/home/docker/sima-cli$ 
+
+sima@jfrog-443-modelsdk-2:/home/docker/sima-cli$ sima-model-to-pipeline model-to-pipeline --help
+
+  Usage: sima-model-to-pipeline model-to-pipeline [OPTIONS]
+
+```
+
+### Another terminal open mpk-cli docker & execute the same command in the same path to build the application and project.mpk
+
+```sh
+$ sima-cli sdk mpk
+✅ sima-cli is up-to-date
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+▶ Executing command in container: jfrog-443-modelsdk-2.0.0_palette_sdk_master_b240
+=============================================================
+ 🚀 Welcome to the ModelSDK Container 
+ 
+ ⚠️  IMPORTANT NOTICE:
+ Please keep all your work in the mounted path:
+     /home/docker/sima-cli 
+ to avoid losing files if the container is removed accidentally.
+=============================================================
+sima@jfrog-443-modelsdk-2:/home/docker/sima-cli$ exit
+logout
+sima@sima:~/workspace/mpktool/sdk_2.0$ sima-cli sdk mpk
+✅ sima-cli is up-to-date
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+▶ Executing command in container: jfrog-443-mpk_cli_toolset-2.0.0_palette_sdk_master_b240
+=============================================================
+ 🚀 Welcome to the Palette SDK Container 
+ 
+ ⚠️  IMPORTANT NOTICE:
+ Please keep all your work in the mounted path:
+     /home/docker/sima-cli 
+ to avoid losing files if the container is removed accidentally.
+=============================================================
+sima@jfrog-443-mpk_cli_toolset-2:/home/docker/sima-cli$ 
+
+sima@jfrog-443-mpk_cli_toolset-2:/home/docker/sima-cli$ sima-model-to-pipeline model-to-pipeline --help
+
+  Usage: sima-model-to-pipeline model-to-pipeline [OPTIONS]
+
+```
+
+
 ```sh
 $ sima-model-to-pipeline model-to-pipeline --help
 
