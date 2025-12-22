@@ -15,18 +15,14 @@ Before installation, make sure your sima-cli is [up-to-date](https://docs.sima.a
 
 ## Install the tool
 
-To install inside the **Palette model SDK** environment:
-
+First make sure you have installed the Palette SDK:
 ```bash
-sima-cli sdk model 
-sima-cli install gh:sima-ai/tool-model-to-pipeline
-source ~/.bashrc
+sima-user@sima-user-machine:~$ sima-cli install sdk
 ```
 
-To install inside the **Palette mpk-cli SDK** environment:
+Then, install on the host machine:
 
 ```bash
-sima-cli sdk mpk 
-sima-cli install gh:sima-ai/tool-model-to-pipeline
-source ~/.bashrc
+sima-user@sima-user-machine:~$ sima-cli install gh:sima-ai/tool-model-to-pipeline
 ```
+
