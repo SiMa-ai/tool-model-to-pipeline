@@ -1,7 +1,7 @@
 loguru==0.7.3
 ultralytics==8.3.145
 typer==0.16.0
-rich
+rich==14.0.0
 paramiko
 scp
 pydantic
