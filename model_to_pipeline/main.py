@@ -187,7 +187,7 @@ def run(
     yocto: Optional[bool] = typer.Option(
         False, help="enable this flag to build pipeline for yocto targets"
     ),
-	qid: Optional[int] = typer.Option(
+    qid: Optional[int] = typer.Option(
         0, help="provide the queue_id to build multiple pipelines for PCIe based applications"
     ),
     model_name: Optional[str] = typer.Option(
@@ -347,7 +347,7 @@ def run(
     """Runs the tool to convert the model into a working pipeline"""
     args = argparse.Namespace()
     args.yocto = yocto
-	args.qid = qid
+    args.qid = qid
     args.model_path = model_path
     args.model_name = model_name
     args.post_surgery_model_path = post_surgery_model_path
@@ -419,8 +419,8 @@ def run(
             args.pipeline_name = config_data.get("pipeline_name", "MyPipeline")
 
             args.yocto = config_data.get("yocto", False)
-			
-			args.qid = config_data.get("qid",0)
+            
+            args.qid = config_data.get("qid",0)
             # Overriding model params
             args.model_path = config_data.get("model_params", {}).get(
                 "model_path", model_path
