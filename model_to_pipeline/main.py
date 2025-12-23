@@ -31,7 +31,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 # -----------------------------
 # Third-party libraries
