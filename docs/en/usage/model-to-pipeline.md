@@ -1,58 +1,19 @@
 ## model-to-pipeline
 
-We need to run this model-to-pipeline twice, 
+**model-to-pipeline** is a two-stage workflow that converts an FP32 model into a pipeline executable on **SiMa hardware**.
 
-Once in the model docker for the Model-Download, Graph-Surgery and Compilation process
+- **Stage 1**: Quantize and compile the model inside the **Model SDK container**.
+- **Stage 2**: Package and build the deployable **pipeline binary (MPK)**.
 
-Second time for the pipeline creation and mpk creation process.
+The **`sima-cli`** tool can automate both stages by executing a predefined script file.
 
-To-do this we can create a .sima script to execute the model-to-pipeline from Host-pc
-
+Run the workflow using a YAML-based configuration:
 
 ```sh
-host-pc$ cat build_model.sima
-
-# build-model.sima
-    echo "Starting Pipeline building process..."
-    model 
-	{
-            mkdir /home/docker/sima-cli/build_yolov8n || \
-            cd /home/docker/sima-cli/build_yolov8n \
-            && sima-model-to-pipeline model-to-pipeline \
-            --model-path yolov8n.onnx \
-            --model-name yolov8 \
-            --pipeline-name yolov8n \
-            --host-ip 172.16.1.20 \
-            --host-port 5000 \
-            --input-width 1280 \
-            --input-height 720 \
-            --device-type modalix \
-            --rtsp-src "rtsp://192.168.132.205/axis-media/media.amp"
-            
-      }
-
-    mpk 
-	{
-            cd /home/docker/sima-cli/build_yolov8n \
-            && sima-model-to-pipeline model-to-pipeline \
-            --model-path yolov8n.onnx \
-            --model-name yolov8 \
-            --pipeline-name yolov8n \
-            --host-ip 172.16.1.20 \
-            --host-port 5000 \
-            --input-width 1280 \
-            --input-height 720 \
-            --device-type modalix \
-            --rtsp-src "rtsp://192.168.132.205/axis-media/media.amp"
-      }
-
-    echo "✅ All done!"
-
+host-pc$ sima-cli sdk run tools-model-to-pipeline/sample/yolov8m/run-yaml.sima
 ```
-### Executed the sima-cli sdk run command from the host-pc
-```sh
-host-pc$ sima-cli sdk run build_model.sima
-```
+
+
 
 ## Or Run the model-to-pipeline command in both docker in the same path.
 
