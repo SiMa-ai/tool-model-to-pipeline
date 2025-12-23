@@ -107,7 +107,7 @@ def run_step(
             traceback.print_exc()
             raise RuntimeError
 
-def write_state(update: Dict[str, str]) -> None:
+def write_state(update: dict[str, str]) -> None:
     """
     Atomically update the shared state file.
     """
