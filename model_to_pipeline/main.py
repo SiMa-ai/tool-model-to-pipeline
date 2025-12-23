@@ -30,6 +30,7 @@ from typing import Optional
 import yaml
 from model_to_pipeline.compilers.compiler_base import CompilerMeta
 import typer
+import os
 
 from rich.console import Console
 from rich.table import Table
