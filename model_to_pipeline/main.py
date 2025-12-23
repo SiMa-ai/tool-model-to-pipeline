@@ -98,6 +98,39 @@ def run_step(
             raise RuntimeError
 
 
+STATE_FILE = os.environ.get(
+    "MODEL_TO_PIPELINE_STATE_FILE",
+    "/home/docker/sima-cli/model-to-pipeline-state.json",
+)
+
+def write_state(update: Dict[str, str]) -> None:
+    """
+    Atomically update the shared state file.
+    """
+    state = {}
+
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+        except Exception:
+            state = {}
+
+    state.update(update)
+    state["ts"] = int(time.time())
+
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+
+    # Atomic write: tmp → replace
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, dir=os.path.dirname(STATE_FILE)
+    ) as tmp:
+        json.dump(state, tmp)
+        tmp.flush()
+        os.fsync(tmp.fileno())
+
+    os.replace(tmp.name, STATE_FILE)
+
 def main(args: argparse.Namespace) -> None:
     """Main function which executes the tool
 
@@ -110,11 +143,6 @@ def main(args: argparse.Namespace) -> None:
     steps = list(StepMeta.registry.items())
     max_name_len = max(len(name) for name, _ in steps)
     results = []
-    monitor_server = None
-
-    if args.config_yaml:
-        monitor_server = ServerThread(app, port=5000, config_yaml=args.config_yaml)
-        monitor_server.start()
 
     with step_logger(step_name="setup", log_dir="logs"):
         logging.info(args)
@@ -144,8 +172,11 @@ def main(args: argparse.Namespace) -> None:
         elapsed = time.time() - start_time
         results.append((step_name, success, elapsed))
 
-        if monitor_server:
-            monitor_server.update_state(step_name, "success" if success else "fail")
+        status = "success" if success else "fail"
+        write_state({step_name: status})
+
+    overall = "success" if all(s for _, s, _ in results) else "fail"
+    write_state({"__overall__": overall})
 
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
@@ -171,11 +202,6 @@ def main(args: argparse.Namespace) -> None:
 
     console.print(table)
     console.print("\n[bold underline][/bold underline]")
-
-    if monitor_server:        
-        print("\n✅ Process completed, press any key to exit...")
-        input()
-        monitor_server.shutdown()
 
 
 @model_to_pipeline_app.command("model-to-pipeline")
