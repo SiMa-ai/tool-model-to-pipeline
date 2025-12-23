@@ -20,9 +20,10 @@ First make sure you have installed the Palette SDK:
 sima-user@sima-user-machine:~$ sima-cli install sdk
 ```
 
-Then, install on the host machine:
+Then, install on the host machine in your workspace folder:
 
 ```bash
+sima-user@sima-user-machine:~$ cd ~/workspace
 sima-user@sima-user-machine:~$ sima-cli install gh:sima-ai/tool-model-to-pipeline
 ```
 

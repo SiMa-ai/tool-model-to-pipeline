@@ -159,3 +159,15 @@ info "Installing tool-model-to-pipeline into SDK containers"
     "sima-cli install gh:sima-ai/tool-model-to-pipeline@2.0_prep"
 
 info "Installation completed successfully"
+echo
+echo -e "\033[1mSupported YOLO models:\033[0m"
+echo "- yolov8n, yolov8m, yolov8l"
+echo "- yolov9t, yolov9s, yolov9m, yolov9c"
+echo "- yolov10n, yolov10s, yolov10m, yolov10b, yolov10x"
+echo "- yolo11n, yolo11s, yolo11m, yolo11l"
+echo
+
+echo -e "\033[1mRun pipeline creation (example with YOLOv9c):\033[0m"
+echo
+echo -e "\033[32msima-cli sdk run tool-model-to-pipeline/samples/yolov9c/run-yaml.sima\033[0m"
+echo
