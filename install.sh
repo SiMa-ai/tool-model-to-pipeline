@@ -164,7 +164,7 @@ info "Installing tool-model-to-pipeline into SDK containers"
 cd model_to_pipeline/monitor
 python3 -m venv .venv
 source .venv/bin/activate
-pip3 install -r requirements
+pip3 install -r requirements.txt
 info "Installed model-to-pipeline monitor app on the host"
 
 info "Package installation completed successfully"
