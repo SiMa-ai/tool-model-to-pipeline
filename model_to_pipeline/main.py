@@ -21,31 +21,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# -----------------------------
+# Standard library
+# -----------------------------
 import argparse
-from pathlib import Path
+import logging
+import os
 import sys
 import time
+import traceback
+from pathlib import Path
 from typing import Optional
 
-import yaml
-from model_to_pipeline.compilers.compiler_base import CompilerMeta
+# -----------------------------
+# Third-party libraries
+# -----------------------------
 import typer
-import os
-
+import yaml
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from rich import box
-import logging
-import traceback
-from model_to_pipeline.utils.logger.logger import (
-    step_logger,
-)  # Assuming your logger setup is here
+
+# -----------------------------
+# Internal application imports
+# -----------------------------
+from model_to_pipeline.compilers.compiler_base import CompilerMeta
 from model_to_pipeline.steps.steps_base import StepMeta
+from model_to_pipeline.utils.logger.logger import step_logger
 from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
 
 model_to_pipeline_app = typer.Typer()
 
+STATE_FILE = os.environ.get(
+    "MODEL_TO_PIPELINE_STATE_FILE",
+    "/home/docker/sima-cli/model-to-pipeline-state.json",
+)
 
 def run_step(
     step_name: str, args: argparse.Namespace, console: Console, max_name_len: int
@@ -95,12 +106,6 @@ def run_step(
             )
             traceback.print_exc()
             raise RuntimeError
-
-
-STATE_FILE = os.environ.get(
-    "MODEL_TO_PIPELINE_STATE_FILE",
-    "/home/docker/sima-cli/model-to-pipeline-state.json",
-)
 
 def write_state(update: Dict[str, str]) -> None:
     """
