@@ -42,8 +42,6 @@ from model_to_pipeline.utils.logger.logger import (
 )  # Assuming your logger setup is here
 from model_to_pipeline.steps.steps_base import StepMeta
 from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
-from model_to_pipeline.monitor.app import app, ServerThread
-
 
 model_to_pipeline_app = typer.Typer()
 

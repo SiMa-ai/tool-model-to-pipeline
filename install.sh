@@ -158,7 +158,16 @@ info "Installing tool-model-to-pipeline into SDK containers"
 "$SIMA_CLI" sdk mpk \
     "sima-cli install gh:sima-ai/tool-model-to-pipeline@2.0_prep"
 
-info "Installation completed successfully"
+
+# Install monitor on the host side
+
+cd model_to_pipeline/monitor
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -r requirements
+info "Installed model-to-pipeline monitor app on the host"
+
+info "Package installation completed successfully"
 echo
 echo -e "\033[1mSupported YOLO models:\033[0m"
 echo "- yolov8n, yolov8m, yolov8l"
