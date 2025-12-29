@@ -255,12 +255,8 @@ if not pip_bin.exists():
 # Install requirements.txt from current directory
 # ------------------------------------------------------------
 
-req_file = Path("requirements.txt")
-if not req_file.exists():
-    die("requirements.txt not found in current directory")
-
 subprocess.run(
-    [str(pip_bin), "install", "-r", str(req_file)],
+    [str(pip_bin), "install", "."],
     check=True,
 )
 

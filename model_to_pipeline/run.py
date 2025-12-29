@@ -12,7 +12,7 @@ import psutil
 # Config
 # ------------------------------------------------------------
 
-MONITOR_DIR = Path("tool-model-to-pipeline/model_to_pipeline/monitor").resolve()
+MONITOR_DIR = Path("model_to_pipeline/monitor").resolve()
 PORT = 5000
 
 TMP_DIR = Path(os.getenv("TEMP", "/tmp"))
