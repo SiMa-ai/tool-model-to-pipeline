@@ -6,6 +6,5 @@ paramiko
 scp
 pydantic==2.12.5
 numpy>=1.26.0,<2.0
-docker==7.1.0
 flask==3.1.2
 watchdog==6.0.0
