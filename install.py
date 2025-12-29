@@ -227,26 +227,44 @@ subprocess.run(
 # Install monitor app on host
 # ------------------------------------------------------------
 
-monitor_dir = Path("model_to_pipeline") / "monitor"
-if not monitor_dir.exists():
-    die(f"Monitor directory not found: {monitor_dir}")
+info("Installing Python dependencies into local virtual environment")
 
-info("Installing model-to-pipeline monitor app on host")
+# ------------------------------------------------------------
+# Create venv in current directory
+# ------------------------------------------------------------
 
-venv_dir = monitor_dir / ".venv"
-subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+venv_dir = Path(".venv")
+if not venv_dir.exists():
+    subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+    info(f"Created virtual environment at {venv_dir}")
+else:
+    info(f"Using existing virtual environment at {venv_dir}")
+
+# ------------------------------------------------------------
+# Resolve pip inside venv
+# ------------------------------------------------------------
 
 pip_bin = venv_dir / (
     "Scripts/pip.exe" if platform.system() == "Windows" else "bin/pip"
 )
 
+if not pip_bin.exists():
+    die(f"pip not found in virtual environment: {pip_bin}")
+
+# ------------------------------------------------------------
+# Install requirements.txt from current directory
+# ------------------------------------------------------------
+
+req_file = Path("requirements.txt")
+if not req_file.exists():
+    die("requirements.txt not found in current directory")
+
 subprocess.run(
-    [str(pip_bin), "install", "-r", "requirements.txt"],
-    cwd=monitor_dir,
+    [str(pip_bin), "install", "-r", str(req_file)],
     check=True,
 )
 
-info("Installation completed successfully")
+info("Installation completed successfully into host environment")
 print()
 print("Supported YOLO models:")
 print("- yolov8n, yolov8m, yolov8l")
