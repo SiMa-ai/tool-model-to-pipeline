@@ -1,19 +1,27 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "tool-model-to-pipeline"
+version = "2.0.0"
+description = "A tool to convert SiMa.ai models to pipeline format"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+authors = [
+  { name = "SiMa.ai" }
+]
+
 dependencies = [
   "loguru==0.7.3",
+  "ultralytics==8.3.145",
   "typer==0.16.0",
   "rich==14.0.0",
   "paramiko",
   "scp",
-  "pydantic",
-  "onnx",
-  "onnxruntime",
-
-  # NumPy compatibility
-  "numpy==1.23.5; python_version < '3.11'",
-  "numpy>=1.26.0; python_version >= '3.12'",
+  "pydantic==2.12.5",
+  "numpy>=1.26.0,<2.0",
+  "flask==3.1.2",
+  "watchdog==6.0.0",
 ]
