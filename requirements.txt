@@ -7,3 +7,4 @@ scp
 pydantic
 flask
 numpy==1.23.5
+docker==7.1.0

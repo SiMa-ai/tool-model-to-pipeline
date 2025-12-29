@@ -1,5 +1,4 @@
 # build-model.sima
-echo "Starting Pipeline building process..."
 
 model 
 {

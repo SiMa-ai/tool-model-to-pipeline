@@ -28,10 +28,14 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import os, re, glob, json, time, socket, logging
 from datetime import datetime
+import logging
+import argparse
 
 # -------------------------
 # Paths & Config
 # -------------------------
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
@@ -146,7 +150,7 @@ def parse_yaml_as_sections(filepath):
         sections.append((current_section, section_rows))
 
     return sections
-    
+
 def find_latest_log(prefix: str):
     pattern = os.path.join(LOG_DIR, f"{prefix}_*.log")
     matches = glob.glob(pattern)
@@ -267,7 +271,19 @@ def stream_log(prefix):
 # Main
 # -------------------------
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Model-to-Pipeline Monitor")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="Port to run the monitor server on (default: 5000)"
+    )
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+
     logging.basicConfig(level=logging.INFO)
 
     # Load initial state if file exists
@@ -279,13 +295,15 @@ if __name__ == "__main__":
 
     try:
         ip = get_host_ip()
-        print(f"Monitor running at \033[1;34mhttp://{ip}:5000\033[0m")
+        print(
+            f"Monitor running at "
+            f"\033[1;34mhttp://{ip}:{args.port}\033[0m"
+        )
 
         app.run(
             host="0.0.0.0",
-            port=5000,
-            debug=False,
-            use_reloader=False,   # 🔑 IMPORTANT
+            port=args.port,
+            debug=True
         )
     finally:
         observer.stop()
