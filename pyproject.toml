@@ -1,3 +1,19 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+dependencies = [
+  "loguru==0.7.3",
+  "typer==0.16.0",
+  "rich==14.0.0",
+  "paramiko",
+  "scp",
+  "pydantic",
+  "onnx",
+  "onnxruntime",
+
+  # NumPy compatibility
+  "numpy==1.23.5; python_version < '3.11'",
+  "numpy>=1.26.0; python_version >= '3.12'",
+]
