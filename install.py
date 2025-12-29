@@ -66,9 +66,32 @@ SDK_VERSION = ""
 sdk_release = Path("/etc/sdk-release")
 if sdk_release.exists():
     for line in sdk_release.read_text().splitlines():
-        if line.startswith("SDK Version"):
+        s = line.strip()
+
+        # Match "SDK Version" line (case-insensitive)
+        if s.lower().startswith("sdk version"):
             IS_PALETTE = True
-            SDK_VERSION = line.split(":", 1)[1].strip()
+            SDK_VERSION = "unknown"
+
+            # Preferred format: "SDK Version = <value>"
+            if "=" in s:
+                _, rhs = s.split("=", 1)
+                SDK_VERSION = rhs.strip()
+
+            # Alternate format: "SDK Version: <value>"
+            elif ":" in s:
+                _, rhs = s.split(":", 1)
+                SDK_VERSION = rhs.strip()
+
+            # Fallback: "SDK Version <value>"
+            else:
+                parts = s.split(None, 2) 
+                if len(parts) >= 3:
+                    SDK_VERSION = parts[2].strip()
+
+            if not SDK_VERSION:
+                SDK_VERSION = "unknown"
+
             info(f"Detected Palette environment (SDK Version: {SDK_VERSION})")
             break
 
