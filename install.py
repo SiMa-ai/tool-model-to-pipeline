@@ -83,13 +83,45 @@ if sdk_release.exists():
 # ------------------------------------------------------------
 
 if IS_PALETTE:
-    info("Running inside Palette. Executing local install logic.")
+    info("Running inside Palette container. Executing container-specific install logic.")
 
+    hostname = os.uname().nodename.lower()
+    info(f"Detected container hostname: {hostname}")
+
+    # Determine container role
+    if "modelsdk" in hostname:
+        req_file = "requirements_modelsdk.txt"
+        container_type = "Model SDK"
+    elif "mpk" in hostname:
+        req_file = "requirements_mpkcli.txt"
+        container_type = "MPK CLI"
+    else:
+        die(
+            "Unable to determine Palette container type from hostname.\n"
+            f"Hostname: {hostname}\n"
+            "Expected hostname to contain 'modelsdk' or 'mpk'."
+        )
+
+    info(f"Detected Palette container type: {container_type}")
+    info(f"Using requirements file: {req_file}")
+
+    req_path = Path(req_file)
+    if not req_path.exists():
+        die(f"Required dependency file not found: {req_file}")
+
+    # Install package itself
     subprocess.run(
         [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
         check=True,
     )
 
+    # Install container-specific dependencies
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-r", req_file],
+        check=True,
+    )
+
+    # Ensure ~/.local/bin is on PATH (Linux container)
     local_bin = Path.home() / ".local" / "bin"
     path_entries = os.environ.get("PATH", "").split(os.pathsep)
 
@@ -98,10 +130,8 @@ if IS_PALETTE:
         os.environ["PATH"] = f"{local_bin}{os.pathsep}{os.environ['PATH']}"
 
         shell_rc = Path.home() / ".bashrc"
-        if os.environ.get("ZSH_VERSION"):
-            shell_rc = Path.home() / ".zshrc"
-
         export_line = 'export PATH="$HOME/.local/bin:$PATH"'
+
         if shell_rc.exists():
             if export_line not in shell_rc.read_text():
                 shell_rc.write_text(shell_rc.read_text() + "\n" + export_line + "\n")
@@ -110,18 +140,22 @@ if IS_PALETTE:
             shell_rc.write_text(export_line + "\n")
             info(f"PATH persisted in {shell_rc}")
 
+    # Ensure `pip` command exists
     if shutil.which("pip") is None:
         local_bin.mkdir(parents=True, exist_ok=True)
         pip3 = shutil.which("pip3")
         if pip3:
-            target = local_bin / ("pip.exe" if platform.system() == "Windows" else "pip")
+            target = local_bin / "pip"
             if not target.exists():
-                target.symlink_to(pip3)
-                info("Linked pip → pip3")
+                try:
+                    target.symlink_to(pip3)
+                    info("Linked pip → pip3")
+                except OSError:
+                    shutil.copy(pip3, target)
+                    info("Copied pip3 → pip")
 
-    info("Palette installation completed successfully")
+    info("Palette container installation completed successfully")
     sys.exit(0)
-
 
 # ------------------------------------------------------------
 # 3. Host path: validate SDK containers
@@ -202,14 +236,6 @@ if not monitor_dir.exists():
     die(f"Monitor directory not found: {monitor_dir}")
 
 info("Installing model-to-pipeline monitor app on the host")
-
-venv_dir = monitor_dir / ".venv"
-subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
-
-pip_bin = venv_dir / ("Scripts/pip.exe" if platform.system() == "Windows" else "bin/pip")
-python_bin = venv_dir / ("Scripts/python.exe" if platform.system() == "Windows" else "bin/python")
-
-subprocess.run([str(pip_bin), "install", "-r", "requirements.txt"], cwd=monitor_dir, check=True)
 
 info("Package installation completed successfully")
 print()
