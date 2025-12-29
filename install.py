@@ -18,21 +18,21 @@ def die(msg: str):
 
 
 # ------------------------------------------------------------
-# Resolve sima-cli (alias-safe, CI-safe)
+# Resolve sima-cli (stdlib only)
 # ------------------------------------------------------------
 
 def resolve_sima_cli() -> str:
-    # Lazy import
-    import shutil
-
     env_override = os.environ.get("SIMA_CLI")
     if env_override and Path(env_override).exists():
         return env_override
 
-    for name in ("sima-cli", "sima-cli.exe"):
-        path = shutil.which(name)
-        if path:
-            return path
+    # PATH lookup (cross-platform)
+    candidates = ["sima-cli.exe", "sima-cli"] if platform.system() == "Windows" else ["sima-cli"]
+    for c in candidates:
+        for p in os.environ.get("PATH", "").split(os.pathsep):
+            candidate = Path(p) / c
+            if candidate.exists() and os.access(candidate, os.X_OK):
+                return str(candidate)
 
     venv_path = Path.home() / ".sima-cli" / ".venv" / "bin" / "sima-cli"
     if venv_path.exists():
@@ -46,21 +46,18 @@ if not SIMA_CLI:
     die(
         "sima-cli executable not found.\n"
         "Tried:\n"
-        "  - $SIMA_CLI (explicit override)\n"
+        "  - $SIMA_CLI\n"
         "  - PATH\n"
         "  - ~/.sima-cli/.venv/bin/sima-cli\n\n"
         "Fix by running:\n"
         "  export SIMA_CLI=/full/path/to/sima-cli"
     )
 
-if not os.access(SIMA_CLI, os.X_OK):
-    die(f"sima-cli not executable: {SIMA_CLI}")
-
 info(f"Using sima-cli at: {SIMA_CLI}")
 
 
 # ------------------------------------------------------------
-# Detect Palette environment
+# Detect Palette environment (Linux containers only)
 # ------------------------------------------------------------
 
 IS_PALETTE = False
@@ -68,19 +65,16 @@ SDK_VERSION = ""
 
 sdk_release = Path("/etc/sdk-release")
 if sdk_release.exists():
-    try:
-        for line in sdk_release.read_text().splitlines():
-            if line.startswith("SDK Version"):
-                IS_PALETTE = True
-                SDK_VERSION = line.split(":", 1)[1].strip()
-                info(f"Detected Palette environment (SDK Version: {SDK_VERSION})")
-                break
-    except Exception:
-        pass
+    for line in sdk_release.read_text().splitlines():
+        if line.startswith("SDK Version"):
+            IS_PALETTE = True
+            SDK_VERSION = line.split(":", 1)[1].strip()
+            info(f"Detected Palette environment (SDK Version: {SDK_VERSION})")
+            break
 
 
 # ------------------------------------------------------------
-# Palette container install logic (Linux only)
+# Palette container install logic
 # ------------------------------------------------------------
 
 if IS_PALETTE:
@@ -98,33 +92,26 @@ if IS_PALETTE:
     else:
         die(
             "Unable to determine Palette container type from hostname.\n"
-            f"Hostname: {hostname}\n"
-            "Expected hostname to contain 'modelsdk' or 'mpk'."
+            f"Hostname: {hostname}"
         )
 
     info(f"Detected container type: {container_type}")
     info(f"Using requirements file: {requirements}")
 
-    req_path = Path(requirements)
-    if not req_path.exists():
-        die(f"Required dependency file not found: {requirements}")
+    if not Path(requirements).exists():
+        die(f"Missing dependency file: {requirements}")
 
-    # Install tool itself
     subprocess.run(
         [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
         check=True,
     )
 
-    # Install container-specific dependencies
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "-r", requirements],
         check=True,
     )
 
-    # Lazy import
-    import shutil
-
-    # Ensure ~/.local/bin on PATH
+    # Ensure ~/.local/bin on PATH (Linux container)
     local_bin = Path.home() / ".local" / "bin"
     if str(local_bin) not in os.environ.get("PATH", ""):
         os.environ["PATH"] = f"{local_bin}:{os.environ.get('PATH','')}"
@@ -134,56 +121,40 @@ if IS_PALETTE:
         if bashrc.exists() and export_line not in bashrc.read_text():
             bashrc.write_text(bashrc.read_text() + "\n" + export_line + "\n")
 
-    # Ensure pip exists
-    if shutil.which("pip") is None:
-        pip3 = shutil.which("pip3")
-        if pip3:
-            local_bin.mkdir(parents=True, exist_ok=True)
-            target = local_bin / "pip"
-            if not target.exists():
-                try:
-                    target.symlink_to(pip3)
-                except OSError:
-                    shutil.copy(pip3, target)
-
     info("Palette container installation completed successfully")
     sys.exit(0)
 
 
 # ------------------------------------------------------------
-# Host environment: validate SDK containers (lazy docker import)
+# Host environment: validate SDK containers (Docker CLI)
 # ------------------------------------------------------------
 
 info("Running from host environment.")
-info("Validating SDK containers via Docker.")
+info("Validating SDK containers via Docker CLI.")
 
+# Check docker exists
 try:
-    import docker
-except ImportError:
-    die(
-        "Python docker SDK is not installed.\n"
-        "Install it with:\n"
-        "  pip install docker"
+    subprocess.run(["docker", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+except Exception:
+    die("Docker is not installed or not on PATH.")
+
+# Get running container images
+try:
+    result = subprocess.run(
+        ["docker", "ps", "--format", "{{.Image}}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
     )
+except subprocess.CalledProcessError as e:
+    die(f"Failed to query docker containers:\n{e.stderr}")
 
-try:
-    docker_client = docker.from_env()
-    containers = docker_client.containers.list()
-except Exception as e:
-    die(f"Docker is not installed, running, or accessible:\n{e}")
+images = result.stdout.lower().splitlines()
 
-has_model_sdk = False
-has_mpk = False
-has_runtime = False
-
-for c in containers:
-    image = (c.image.tags[0] if c.image.tags else "").lower()
-    if "modelsdk" in image:
-        has_model_sdk = True
-    if "mpk_cli" in image or "mpk" in image:
-        has_mpk = True
-    if "elxr" in image or "yocto" in image:
-        has_runtime = True
+has_model_sdk = any("modelsdk" in img for img in images)
+has_mpk = any("mpk" in img for img in images)
+has_runtime = any("elxr" in img or "yocto" in img for img in images)
 
 if not has_model_sdk:
     die("Model SDK container not found")
