@@ -3,12 +3,12 @@
 model 
 {
         cd /home/docker/sima-cli/tool-model-to-pipeline \
-        && source ~/.bashrc && sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml    
+        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml    
 }
 mpk 
 {
         cd /home/docker/sima-cli/tool-model-to-pipeline \
-        && source ~/.bashrc && sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml
+        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml
 }
 
 echo "✅ All done!"
