@@ -163,14 +163,18 @@ def main(args: argparse.Namespace) -> None:
         is_model_sdk = False
         logging.info(f"mpk_cli docker detected")
 
-    # model_sdk_steps = ['downloadmodel','surgery']
+    model_sdk_steps = ['downloadmodel','surgery', 'downloadcalib', 'compile']
     mpk_cli_steps = ['pipelinecreate', 'mpkcreate']
     for step_name, index in steps:
         logging.info(f'step_name:{step_name}, index:{index}')
+
         if args.step and args.step != step_name:
             continue
         if step_name in mpk_cli_steps and is_model_sdk:
-            logging.info(f'Skipping the {step_name}')
+            logging.info(f'Skipping the {step_name} in this container because it is not meant to run here')
+            continue
+        if step_name in model_sdk_steps and not is_model_sdk:
+            logging.info(f'Skipping the {step_name} in this container because it is not meant to run here')
             continue
 
         start_time = time.time()
@@ -259,7 +263,7 @@ def run(
         metavar="/".join(list(CompilerMeta.registry.keys())),
     ),
     calibration_data_path: Optional[str] = typer.Option(
-        "/home/docker/calibration_images", help="Path to the calibration dataset."
+        "/home/docker/sima-cli/calibration_images", help="Path to the calibration dataset."
     ),
     calibration_samples_count: Optional[int] = typer.Option(
         None, help="Max number of calibration samples."
@@ -444,6 +448,7 @@ def run(
             logging.info(
                 f"Overriding the params from commandline with parameters from {config_yaml}"
             )
+            write_state({'yaml': config_yaml})
             with open(config_yaml, "r") as config:
                 config_data = yaml.safe_load(config)
                 build_tables_from_yaml(config_yaml)

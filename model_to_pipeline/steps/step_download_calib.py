@@ -64,7 +64,7 @@ class StepDownloadModel(StepBase):
                 print('img_urls:', img_urls)
 
                 # Create output directory
-                output_dir = "/home/docker"
+                output_dir = "/home/docker/sima-cli"
                 calib_dir = os.path.join(output_dir, 'calibration_images')
                 args.calibration_data_path = calib_dir
 

@@ -61,7 +61,7 @@ compilation_params:
   # ---- Calibration settings (used during quantization) ----
   calibration_params:
     # Path (inside SDK container) to calibration dataset
-    calibration_data_path: /home/docker/sima-cli/val2017
+    calibration_data_path: /home/docker/sima-cli/calibration_images
 
     # File extension of calibration images (`jpg`, `jpeg`, `png`, `webp`; mixed not supported)
     calibration_ds_extn: jpg
