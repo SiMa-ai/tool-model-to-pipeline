@@ -5,6 +5,6 @@ rich==14.0.0
 paramiko
 scp
 pydantic==2.12.5
-numpy>=1.26.0,<2.0
 flask==3.1.2
 watchdog==6.0.0
+numpy==1.23.5
