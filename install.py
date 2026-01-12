@@ -256,7 +256,7 @@ if not pip_bin.exists():
 # ------------------------------------------------------------
 
 subprocess.run(
-    [str(pip_bin), "install", "."],
+    [str(pip_bin), "install", "-r", "requirements.txt"],
     check=True,
 )
 
