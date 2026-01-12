@@ -32,6 +32,7 @@ import time
 import traceback
 from pathlib import Path
 from typing import Optional, Dict
+import tempfile
 
 # -----------------------------
 # Third-party libraries
