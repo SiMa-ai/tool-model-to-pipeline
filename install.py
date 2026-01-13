@@ -158,7 +158,7 @@ if IS_PALETTE:
     # --------------------------------------------------
     if container_type == "Model SDK":
         tool_dir = Path.cwd()
-        venv_dir = tool_dir / ".venv"
+        venv_dir = tool_dir / ".model_venv"
         python_bin = venv_dir / "bin" / "python"
 
         info(f"Using virtual environment at: {venv_dir}")
