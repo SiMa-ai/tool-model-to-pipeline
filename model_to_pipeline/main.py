@@ -168,7 +168,6 @@ def main(args: argparse.Namespace) -> None:
 
     for step_name, index in steps:
         logging.info(f'step_name:{step_name}, index:{index}')
-        write_state({step_name: 'started'})
 
         if args.step and args.step != step_name:
             continue
@@ -179,6 +178,7 @@ def main(args: argparse.Namespace) -> None:
             logging.info(f'Skipping the {step_name} in this container because it is not meant to run here')
             continue
 
+        write_state({step_name: 'started'})
         start_time = time.time()
         success = run_step(step_name, args, console, max_name_len)
         elapsed = time.time() - start_time
