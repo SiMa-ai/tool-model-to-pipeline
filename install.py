@@ -204,8 +204,30 @@ subprocess.run(
         "sdk",
         "model",
         "sima-cli",
+        "version"
+    ],
+    check=True,
+)
+
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "model",
+        "sima-cli",
         "install",
         "gh:sima-ai/tool-model-to-pipeline@2.0_prep",
+    ],
+    check=True,
+)
+
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "mpk",
+        "sima-cli",
+        "version"
     ],
     check=True,
 )
