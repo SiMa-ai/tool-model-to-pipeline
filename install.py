@@ -252,6 +252,7 @@ info("  - Runtime: OK")
 
 info("Installing tool-model-to-pipeline into SDK containers")
 
+# Running `version` command ensures that sima-cli is updated automatically
 subprocess.run(
     [
         SIMA_CLI,
@@ -275,6 +276,7 @@ subprocess.run(
     check=True,
 )
 
+# Running `version` command ensures that sima-cli is updated automatically
 subprocess.run(
     [
         SIMA_CLI,
@@ -309,7 +311,7 @@ info("Installing Python dependencies into local virtual environment")
 # Create venv in current directory
 # ------------------------------------------------------------
 
-venv_dir = Path(".venv")
+venv_dir = Path.cwd() / ".venv"
 if not venv_dir.exists():
     subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
     info(f"Created virtual environment at {venv_dir}")
@@ -330,7 +332,7 @@ if not pip_bin.exists():
 # ------------------------------------------------------------
 # Install requirements.txt from current directory
 # ------------------------------------------------------------
-
+print(str(pip_bin))
 subprocess.run(
     [str(pip_bin), "install", "-r", "requirements.txt"],
     check=True,
@@ -346,5 +348,5 @@ print("- yolo11n, yolo11s, yolo11m, yolo11l")
 print()
 print("Run pipeline creation (example):")
 print("cd tool-model-to-pipeline")
-print("python3 model-to-pipeline/run.sh tool-model-to-pipeline/samples/yolov9c/run-yaml.sima")
+print("python3 model-to-pipeline/run.py samples/yolov9c/run-yaml.sima")
 print()
