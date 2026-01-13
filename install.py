@@ -153,47 +153,13 @@ if IS_PALETTE:
     if not Path(requirements).exists():
         die(f"Missing dependency file: {requirements}")
 
-    # --------------------------------------------------
-    # Model SDK: use isolated virtual environment
-    # --------------------------------------------------
-    if container_type == "Model SDK":
-        tool_dir = Path.cwd()
-        venv_dir = tool_dir / ".model_venv"
-        python_bin = venv_dir / "bin" / "python"
-
-        info(f"Using virtual environment at: {venv_dir}")
-
-        if not python_bin.exists():
-            info("Creating virtual environment...")
-            subprocess.run(
-                [sys.executable, "-m", "venv", str(venv_dir), "--system-site-packages"],
-                check=True,
-            )
-
-        info("Installing dependencies into virtual environment...")
-        subprocess.run(
-            [str(python_bin), "-m", "pip", "install", "-r", requirements],
-            check=True,
-        )
-
-        subprocess.run(
-            [str(python_bin), "-m", "pip", "install", ".", "--force-reinstall"],
-            check=True,
-        )
-        add_path_to_bash_profile(venv_dir / "bin")
-        info("Model SDK environment setup completed successfully")
-        sys.exit(0)
-
-    # --------------------------------------------------
-    # MPK CLI: install into container environment
-    # --------------------------------------------------
     subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-r", requirements],
+        [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
         check=True,
     )
 
     subprocess.run(
-        [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
+        [sys.executable, "-m", "pip", "install", "-r", requirements],
         check=True,
     )
 
