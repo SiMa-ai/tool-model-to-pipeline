@@ -157,6 +157,19 @@ def find_latest_log(prefix: str):
     return max(matches, key=os.path.getmtime) if matches else None
 
 
+def reset_state_file():
+    """Reset JSON state file and in-memory state."""
+    global STEP_STATES
+    STEP_STATES = {}
+
+    try:
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        with open(STATE_FILE, "w") as f:
+            json.dump({}, f)
+        logging.info("[state] reset to empty")
+    except Exception as e:
+        logging.warning("[state] failed to reset: %s", e)
+
 def load_state_file():
     """Load JSON state file safely."""
     global STEP_STATES
@@ -302,6 +315,7 @@ if __name__ == "__main__":
         load_state_file()
 
     # Start watchdog
+    reset_state_file()
     observer = start_state_watcher()
 
     try:

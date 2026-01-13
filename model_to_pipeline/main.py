@@ -165,8 +165,10 @@ def main(args: argparse.Namespace) -> None:
 
     model_sdk_steps = ['downloadmodel','surgery', 'downloadcalib', 'compile']
     mpk_cli_steps = ['pipelinecreate', 'mpkcreate']
+
     for step_name, index in steps:
         logging.info(f'step_name:{step_name}, index:{index}')
+        write_state({step_name: 'in-progress'})
 
         if args.step and args.step != step_name:
             continue
