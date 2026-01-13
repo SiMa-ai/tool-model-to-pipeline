@@ -166,7 +166,7 @@ if IS_PALETTE:
         if not python_bin.exists():
             info("Creating virtual environment...")
             subprocess.run(
-                [sys.executable, "-m", "venv", str(venv_dir)],
+                [sys.executable, "-m", "venv", str(venv_dir), "--system-site-packages"],
                 check=True,
             )
 
