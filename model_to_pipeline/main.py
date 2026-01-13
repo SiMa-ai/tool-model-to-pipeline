@@ -168,7 +168,7 @@ def main(args: argparse.Namespace) -> None:
 
     for step_name, index in steps:
         logging.info(f'step_name:{step_name}, index:{index}')
-        write_state({step_name: 'in-progress'})
+        write_state({step_name: 'started'})
 
         if args.step and args.step != step_name:
             continue
