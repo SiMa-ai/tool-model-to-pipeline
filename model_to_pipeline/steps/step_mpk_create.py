@@ -65,7 +65,7 @@ class StepMpkCreate(StepBase):
         env = original_env.copy()
         env.pop("LD_LIBRARY_PATH", None)
 
-        command = f"unset LD_LIBRARY_PATH && {env_setup} && mpk create -s ./ -d ./ --clean --board-type {args.device_type}" #  if args.device_type != 'both' else 'davinci'}"
+        command = f"unset LD_LIBRARY_PATH && mpk create -s ./ -d ./ --clean --board-type {args.device_type}" #  if args.device_type != 'both' else 'davinci'}"
         logging.info(f"Executing command to create pipeline: {command}")
         op = subprocess.run(command, shell=True, \
                             executable="/bin/bash", \
