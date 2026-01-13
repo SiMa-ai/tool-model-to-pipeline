@@ -100,6 +100,35 @@ if sdk_release.exists():
 # Palette container install logic
 # ------------------------------------------------------------
 
+def add_path_to_bash_profile(path: str) -> None:
+    """
+    Add a directory to PATH via ~/.bash_profile in an idempotent way.
+    Also updates PATH for the current process.
+    """
+    path = str(Path(path).expanduser().resolve())
+
+    # 1️⃣ Update current process PATH
+    current_path = os.environ.get("PATH", "")
+    if path not in current_path.split(os.pathsep):
+        os.environ["PATH"] = f"{path}{os.pathsep}{current_path}"
+
+    # 2️⃣ Persist to ~/.bash_profile
+    home = Path.home()
+    profile = home / ".bash_profile"
+
+    export_line = f'export PATH="{path}:$PATH"'
+
+    # Ensure file exists
+    if not profile.exists():
+        profile.write_text(export_line + "\n")
+        return
+
+    content = profile.read_text()
+
+    # Avoid duplicate entries
+    if export_line not in content:
+        profile.write_text(content.rstrip() + "\n" + export_line + "\n")
+
 if IS_PALETTE:
     info("Running inside Palette container.")
 
@@ -124,26 +153,51 @@ if IS_PALETTE:
     if not Path(requirements).exists():
         die(f"Missing dependency file: {requirements}")
 
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
-        check=True,
-    )
+    # --------------------------------------------------
+    # Model SDK: use isolated virtual environment
+    # --------------------------------------------------
+    if container_type == "Model SDK":
+        tool_dir = Path.cwd()
+        venv_dir = tool_dir / ".venv"
+        python_bin = venv_dir / "bin" / "python"
 
+        info(f"Using virtual environment at: {venv_dir}")
+
+        if not python_bin.exists():
+            info("Creating virtual environment...")
+            subprocess.run(
+                [sys.executable, "-m", "venv", str(venv_dir)],
+                check=True,
+            )
+
+        info("Installing dependencies into virtual environment...")
+        subprocess.run(
+            [str(python_bin), "-m", "pip", "install", "-r", requirements],
+            check=True,
+        )
+
+        subprocess.run(
+            [str(python_bin), "-m", "pip", "install", ".", "--force-reinstall"],
+            check=True,
+        )
+        add_path_to_bash_profile(venv_dir / "bin")
+        info("Model SDK environment setup completed successfully")
+        sys.exit(0)
+
+    # --------------------------------------------------
+    # MPK CLI: install into container environment
+    # --------------------------------------------------
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "-r", requirements],
         check=True,
     )
 
-    # Ensure ~/.local/bin on PATH (Linux container)
-    local_bin = Path.home() / ".local" / "bin"
-    if str(local_bin) not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = f"{local_bin}:{os.environ.get('PATH','')}"
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
+        check=True,
+    )
 
-        bashrc = Path.home() / ".bashrc"
-        export_line = 'export PATH="$HOME/.local/bin:$PATH"'
-        if bashrc.exists() and export_line not in bashrc.read_text():
-            bashrc.write_text(bashrc.read_text() + "\n" + export_line + "\n")
-
+    add_path_to_bash_profile(Path.home() / ".local" / "bin")
     info("Palette container installation completed successfully")
     sys.exit(0)
 
@@ -291,5 +345,6 @@ print("- yolov10n, yolov10s, yolov10m, yolov10b, yolov10x")
 print("- yolo11n, yolo11s, yolo11m, yolo11l")
 print()
 print("Run pipeline creation (example):")
-print("sima-cli sdk run tool-model-to-pipeline/samples/yolov9c/run-yaml.sima")
+print("cd tool-model-to-pipeline")
+print("python3 model-to-pipeline/run.sh tool-model-to-pipeline/samples/yolov9c/run-yaml.sima")
 print()

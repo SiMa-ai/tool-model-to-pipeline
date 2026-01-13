@@ -7,6 +7,8 @@ import shutil
 from pathlib import Path
 from typing import List
 import psutil
+import argparse
+
 
 # ------------------------------------------------------------
 # Config
@@ -99,10 +101,10 @@ def stop_monitor():
     )
 
 
-def start_monitor():
-    pids = listening_pids(PORT)
+def start_monitor(port=5000):
+    pids = listening_pids(start_monitor)
     if pids:
-        print("⚠️  Port 5000 is already in use by:")
+        print(f"⚠️  Port {port} is already in use by:")
         for pid in pids:
             try:
                 proc = psutil.Process(pid)
@@ -110,7 +112,7 @@ def start_monitor():
             except psutil.NoSuchProcess:
                 pass
 
-        confirm = input("❓ Do you want to stop the process(es) using port 5000? [y/N]: ")
+        confirm = input(f"❓ Do you want to stop the process(es) using port {port}? [y/N]: ")
         if confirm.lower() != "y":
             sys.exit("❌ Aborting monitor startup.")
 
@@ -134,7 +136,7 @@ def start_monitor():
 
     with LOG_FILE.open("ab") as log:
         proc = subprocess.Popen(
-            [sys.executable, f"{MONITOR_DIR}/app.py"],
+            [sys.executable, f"{MONITOR_DIR}/app.py",  "--port", f"{port}"],
             cwd='.',
             stdout=log,
             stderr=subprocess.STDOUT,
@@ -150,10 +152,24 @@ def start_monitor():
 # ------------------------------------------------------------
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("Usage: run.py <path-to-run-yaml.sima | filename.sima>")
+    parser = argparse.ArgumentParser(
+        description="Run a SiMa pipeline with monitoring support."
+    )
+    parser.add_argument(
+        "run_file",
+        help="Path to run YAML (.sima) or filename.sima",
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=5000,
+        help="Port for the monitoring service (default: 5000)",
+    )
 
-    sima_run_file = resolve_sima_run_file(sys.argv[1])
+    args = parser.parse_args()
+
+    sima_run_file = resolve_sima_run_file(args.run_file)
     sima_cli = resolve_sima_cli()
 
     def cleanup(*_):
@@ -162,20 +178,22 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    print("🚀 Starting monitoring service...")
-    start_monitor()
+    print(f"🚀 Starting monitoring service on port {args.port}...")
+    start_monitor(port=args.port)
 
-    print("⚙️  Running pipeline:")
+    print("⚙️  Running workflow:")
     print(f"    {sima_cli} sdk run {sima_run_file}")
 
-    subprocess.run(
-        [sima_cli, "sdk", "run", str(sima_run_file)],
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [sima_cli, "sdk", "run", str(sima_run_file)],
+            check=True,
+        )
+    finally:
+        input("🔑 Press Enter to exit...")
+        cleanup()
+        print("✅ All done!")
 
-    input("🔑 Press any key to exit...")
-    cleanup()
-    print("✅ All done!")
 
 
 if __name__ == "__main__":

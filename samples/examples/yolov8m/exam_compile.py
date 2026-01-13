@@ -12,7 +12,7 @@ Usage examples:
   python3 exam_compile.py \
     --surgery-onnx ./yolov8m_pipeline_mod.onnx \
     --precision int8 \
-    --calib-dir /home/docker/calibration_images \
+    --calib-dir /home/docker/sima-cli/calibration_images \
     --calib-count 128 \
     --calib-ext jpg \
     --calib-type minmax \
@@ -23,7 +23,7 @@ All parameters:
 
   --surgery-onnx    Path to the post-surgery ONNX (required)
   --precision       Quantization mode: int8 | bf16 | fp16  [default: int8]
-  --calib-dir       Folder with calibration images          [default: /home/docker/calibration_images]
+  --calib-dir       Folder with calibration images          [default: /home/docker/sima-cli/calibration_images]
   --calib-count     Number of calibration images to use     [default: (tool default)]
   --calib-ext       Calibration image extension (jpg/png)   [default: jpg]
   --calib-type      Calibration method (e.g., minmax)       [default: minmax]

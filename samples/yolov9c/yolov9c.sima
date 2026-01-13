@@ -3,12 +3,12 @@ echo "Starting Pipeline building process..."
 model 
 {
         cd /home/docker/sima-cli/tool-model-to-pipeline \
-        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c/yolov9c.yaml    
+        && sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c/yolov9c.yaml    
 }
 mpk 
 {
         cd /home/docker/sima-cli/tool-model-to-pipeline \
-        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c/yolov9c.yaml
+        && sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c/yolov9c.yaml
 }
 
 echo "✅ All done!"

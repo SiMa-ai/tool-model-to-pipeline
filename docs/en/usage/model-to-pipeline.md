@@ -10,7 +10,7 @@ The workflow is driven by a YAML-based configuration file.
 ### Running the workflow
 
 ```sh
-host-pc$ cd ~/workspace/tool-model-to-pipeline
+host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
 host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.sima
 ```
 
@@ -36,7 +36,7 @@ Alternatively, the developer can run individual stages by going directly into th
 First, start the monitor session and open http://host:5000 in the browser.
 
 ```sh
-host-pc$ cd ~/workspace/tool-model-to-pipeline
+host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
 host-pc$ python3 model-to-pipeline/monitor/app.py
 ```
 
@@ -58,7 +58,7 @@ host-pc:~$ sima-cli sdk model
  to avoid losing files if the container is removed accidentally.
 =============================================================
 user@vdp-cli-modelsdk:/home/docker/sima-cli$ cd tool-model-to-pipeline/
-user@vdp-cli-modelsdk:/home/docker/sima-cli/tool-model-to-pipeline$ ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml 
+user@vdp-cli-modelsdk:/home/docker/sima-cli/tool-model-to-pipeline$ sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml 
 
 ```
 
@@ -79,7 +79,7 @@ host-pc:~/workspace$ sima-cli sdk mpk
  to avoid losing files if the container is removed accidentally.
 =============================================================
 user@vdp-cli-mpk_cli_toolset:/home/docker/sima-cli$ cd tool-model-to-pipeline/
-yser@vdp-cli-mpk_cli_toolset:/home/docker/sima-cli/tool-model-to-pipeline$ ~/.local/bin/sima-model-to-pipeline model-to-pipeline  --config-yaml samples/yolov8m/yolov8m.yaml
+yser@vdp-cli-mpk_cli_toolset:/home/docker/sima-cli/tool-model-to-pipeline$ sima-model-to-pipeline model-to-pipeline  --config-yaml samples/yolov8m/yolov8m.yaml
 ```
 
 ## Command line options
