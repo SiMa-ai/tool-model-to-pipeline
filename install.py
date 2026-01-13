@@ -312,11 +312,7 @@ info("Installing Python dependencies into local virtual environment")
 # ------------------------------------------------------------
 
 venv_dir = Path.cwd() / ".venv"
-if not venv_dir.exists():
-    subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
-    info(f"Created virtual environment at {venv_dir}")
-else:
-    info(f"Using existing virtual environment at {venv_dir}")
+subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
 
 # ------------------------------------------------------------
 # Resolve pip inside venv
@@ -332,7 +328,7 @@ if not pip_bin.exists():
 # ------------------------------------------------------------
 # Install requirements.txt from current directory
 # ------------------------------------------------------------
-print(str(pip_bin))
+
 subprocess.run(
     [str(pip_bin), "install", "-r", "requirements.txt"],
     check=True,
