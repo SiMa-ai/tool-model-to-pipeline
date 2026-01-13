@@ -6,3 +6,4 @@ scp
 pydantic==2.12.5
 flask==3.1.2
 watchdog==6.0.0
+psutil==7.2.1
