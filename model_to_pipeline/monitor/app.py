@@ -45,7 +45,7 @@ WORKSPACE_DIR = os.path.expanduser("~/workspace")
 STATE_FILE = os.path.join(WORKSPACE_DIR, "model-to-pipeline-state.json")
 STATE_DIR = os.path.dirname(STATE_FILE) or "."
 
-LOG_DIR = os.path.join(WORKSPACE_DIR, "logs")
+LOG_DIR = os.path.join(WORKSPACE_DIR, 'model-to-pipeline', 'logs')
 
 # -------------------------
 # Flask App
