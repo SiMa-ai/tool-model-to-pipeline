@@ -45,7 +45,7 @@ WORKSPACE_DIR = os.path.expanduser("~/workspace")
 STATE_FILE = os.path.join(WORKSPACE_DIR, "model-to-pipeline-state.json")
 STATE_DIR = os.path.dirname(STATE_FILE) or "."
 
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_DIR = os.path.join(WORKSPACE_DIR, "logs")
 
 # -------------------------
 # Flask App
@@ -206,12 +206,22 @@ def start_state_watcher():
 # -------------------------
 # Flask Routes
 # -------------------------
-
 @app.route("/")
 def index():
     yaml_file = request.args.get("input")
     yaml_sections = []
 
+    # 1️⃣ Fallback to STATE_FILE if no input arg
+    if not yaml_file and os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+            yaml_file = state.get("yaml")
+        except Exception as e:
+            app.logger.exception("Failed to read state file: %s", e)
+            yaml_file = None
+
+    # 2️⃣ Load YAML sections if we have a yaml file
     if yaml_file:
         try:
             yaml_sections = parse_yaml_as_sections(yaml_file) or []
@@ -225,6 +235,7 @@ def index():
         yaml_file=yaml_file,
         yaml_sections=yaml_sections,
     )
+
 
 @app.route("/state")
 def state():

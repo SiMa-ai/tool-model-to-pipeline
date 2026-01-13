@@ -134,8 +134,8 @@ def start_monitor():
 
     with LOG_FILE.open("ab") as log:
         proc = subprocess.Popen(
-            [sys.executable, "app.py"],
-            cwd=str(MONITOR_DIR),
+            [sys.executable, f"{MONITOR_DIR}/app.py"],
+            cwd='.',
             stdout=log,
             stderr=subprocess.STDOUT,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
