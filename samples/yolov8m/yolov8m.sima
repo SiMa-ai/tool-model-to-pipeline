@@ -3,7 +3,7 @@
 model 
 {
         cd /home/docker/sima-cli/tool-model-to-pipeline \
-        && .~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml    
+        && .model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml    
 }
 mpk 
 {

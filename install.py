@@ -5,6 +5,10 @@ import subprocess
 import platform
 from pathlib import Path
 
+MODEL_VENV_DIR = Path(".model_venv")
+MODEL_REQ = "requirements_modelsdk.txt"
+MPK_REQ = "requirements_mpkcli.txt"
+
 # ------------------------------------------------------------
 # Logging helpers
 # ------------------------------------------------------------
@@ -129,43 +133,83 @@ def add_path_to_bash_profile(path: str) -> None:
     if export_line not in content:
         profile.write_text(content.rstrip() + "\n" + export_line + "\n")
 
-if IS_PALETTE:
-    info("Running inside Palette container.")
 
+def run(cmd: list[str]) -> None:
+    subprocess.run(cmd, check=True)
+
+
+def create_modelsdk_venv(venv_dir: Path) -> Path:
+    """Create (or reuse) Model SDK virtual environment."""
+    if not venv_dir.exists():
+        info(f"Creating Model SDK venv at {venv_dir}")
+        run([
+            sys.executable,
+            "-m",
+            "venv",
+            str(venv_dir),
+            "--system-site-packages",
+        ])
+    else:
+        info(f"Using existing Model SDK venv at {venv_dir}")
+
+    python_bin = venv_dir / "bin" / "python"
+    return python_bin
+
+
+def install_in_model_sdk(python_bin: Path) -> None:
+    """Install dependencies for Model SDK container."""
+    info("Installing Model SDK dependencies")
+
+    run([python_bin, "-m", "pip", "install", "-r", MODEL_REQ])
+    run([python_bin, "-m", "pip", "install", "ultralytics", "--no-deps"])
+    run([python_bin, "-m", "pip", "install", ".", "--no-deps"])
+
+
+def install_in_mpk_cli() -> None:
+    """Install dependencies for MPK CLI container."""
+    info("Installing MPK CLI dependencies")
+
+    run([sys.executable, "-m", "pip", "install", "-r", MPK_REQ])
+    run([sys.executable, "-m", "pip", "install", ".", "--force-reinstall"])
+
+
+def detect_palette_container() -> str:
     hostname = os.uname().nodename.lower()
     info(f"Detected container hostname: {hostname}")
 
     if "modelsdk" in hostname:
-        requirements = "requirements_modelsdk.txt"
-        container_type = "Model SDK"
-    elif "mpk" in hostname:
-        requirements = "requirements_mpkcli.txt"
-        container_type = "MPK CLI"
-    else:
-        die(
-            "Unable to determine Palette container type from hostname.\n"
-            f"Hostname: {hostname}"
-        )
+        return "modelsdk"
+    if "mpk" in hostname:
+        return "mpk"
 
-    info(f"Detected container type: {container_type}")
-    info(f"Using requirements file: {requirements}")
-
-    if not Path(requirements).exists():
-        die(f"Missing dependency file: {requirements}")
-
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", ".", "--force-reinstall"],
-        check=True,
+    die(
+        "Unable to determine Palette container type from hostname.\n"
+        f"Hostname: {hostname}"
     )
 
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-r", requirements],
-        check=True,
-    )
 
-    add_path_to_bash_profile(Path.home() / ".local" / "bin")
+def palette_install() -> None:
+    info("Running inside Palette container")
+
+    container_type = detect_palette_container()
+
+    if container_type == "modelsdk":
+        python_bin = create_modelsdk_venv(MODEL_VENV_DIR)
+        install_in_model_sdk(python_bin)
+        venv_dir = MODEL_VENV_DIR.resolve()
+        venv_bin = venv_dir / "bin"
+        add_path_to_bash_profile(venv_bin)
+
+    elif container_type == "mpk":
+        install_in_mpk_cli()
+        add_path_to_bash_profile(Path.home() / ".local" / "bin")
+
     info("Palette container installation completed successfully")
     sys.exit(0)
+
+if IS_PALETTE:
+    info("Running inside Palette container.")
+    palette_install()
 
 
 # ------------------------------------------------------------
