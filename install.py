@@ -120,7 +120,7 @@ def add_path_to_bash_profile(path: str) -> None:
     home = Path.home()
     profile = home / ".bash_profile"
 
-    export_line = f'export PATH="{path}:$PATH"'
+    export_line = f'export PATH="$PATH:{path}"'
 
     # Ensure file exists
     if not profile.exists():
