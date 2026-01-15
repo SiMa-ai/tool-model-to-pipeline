@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+
+# Copyright (c) 2025 SiMa.ai
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 import sys
 import subprocess
@@ -8,7 +32,8 @@ from pathlib import Path
 from typing import List
 import psutil
 import argparse
-
+import webbrowser
+import socket
 
 # ------------------------------------------------------------
 # Config
@@ -65,6 +90,40 @@ def resolve_sima_cli() -> str:
 # ------------------------------------------------------------
 # Port / process handling (cross-platform)
 # ------------------------------------------------------------
+def get_host_ip() -> str:
+    """
+    Best-effort way to get a reachable host IP.
+    Falls back to localhost.
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception as e:
+        return "127.0.0.1"
+
+
+def try_open_browser(port: int):
+    """
+    Try to open the monitor URL in a browser if available.
+    Safe for headless systems.
+    """
+    url = f"http://{get_host_ip()}:{port}"
+
+    # Common headless indicators
+    if os.environ.get("DISPLAY") is None and os.name != "nt":
+        print(f"🖥️  No DISPLAY detected, skipping browser launch. If you have another machine that can reach this host, open the URL {url} manually.")
+        return
+
+    try:
+        if webbrowser.open(url, new=2):
+            print(f"🌐 Opened browser at {url}")
+        else:
+            print(f"⚠️  Browser detected but failed to open {url}")
+    except webbrowser.Error:
+        print(f"⚠️  No usable browser found, if you have another machine that can reach this host, open the URL {url} manually.")
 
 def listening_pids(port: int) -> List[int]:
     pids = set()
@@ -145,6 +204,7 @@ def start_monitor(port=5000):
 
     PID_FILE.write_text(str(proc.pid))
     print(f"📡 Monitor server started (PID={proc.pid})")
+    try_open_browser(port)
 
 
 # ------------------------------------------------------------
