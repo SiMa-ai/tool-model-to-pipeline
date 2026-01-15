@@ -23,6 +23,7 @@
 
 import os
 import tempfile
+import time
 
 STATE_FILE = os.environ.get(
     "MODEL_TO_PIPELINE_STATE_FILE",
