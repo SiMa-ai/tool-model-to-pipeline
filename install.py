@@ -162,7 +162,7 @@ def install_in_model_sdk(python_bin: Path) -> None:
 
     run([python_bin, "-m", "pip", "install", "-r", MODEL_REQ])
     run([python_bin, "-m", "pip", "install", "ultralytics", "--no-deps"])
-    run([python_bin, "-m", "pip", "install", ".", "--no-deps"])
+    run([python_bin, "-m", "pip", "install", "."])
 
 
 def install_in_mpk_cli() -> None:
