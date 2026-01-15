@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -256,7 +256,7 @@ def main():
 
     args = parser.parse_args()
 
-    yaml_arg = args.yaml  # keep exactly as passed
+    yaml_arg = args.yaml
     sima_cli = resolve_sima_cli()
     sima_file = write_sima_file(yaml_arg)
 

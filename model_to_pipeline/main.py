@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -52,13 +52,9 @@ from model_to_pipeline.compilers.compiler_base import CompilerMeta
 from model_to_pipeline.steps.steps_base import StepMeta
 from model_to_pipeline.utils.logger.logger import step_logger
 from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
+from model_to_pipeline.utils.state import write_state
 
 model_to_pipeline_app = typer.Typer()
-
-STATE_FILE = os.environ.get(
-    "MODEL_TO_PIPELINE_STATE_FILE",
-    "/home/docker/sima-cli/model-to-pipeline-state.json",
-)
 
 def run_step(
     step_name: str, args: argparse.Namespace, console: Console, max_name_len: int
@@ -109,33 +105,6 @@ def run_step(
             traceback.print_exc()
             raise RuntimeError
 
-def write_state(update: dict[str, str]) -> None:
-    """
-    Atomically update the shared state file.
-    """
-    state = {}
-
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r") as f:
-                state = json.load(f)
-        except Exception:
-            state = {}
-
-    state.update(update)
-    state["ts"] = int(time.time())
-
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-
-    # Atomic write: tmp → replace
-    with tempfile.NamedTemporaryFile(
-        "w", delete=False, dir=os.path.dirname(STATE_FILE)
-    ) as tmp:
-        json.dump(state, tmp)
-        tmp.flush()
-        os.fsync(tmp.fileno())
-
-    os.replace(tmp.name, STATE_FILE)
 
 def main(args: argparse.Namespace) -> None:
     """Main function which executes the tool
