@@ -11,7 +11,7 @@ The workflow is driven by a YAML-based configuration file.
 
 ```sh
 host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
-host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.sima
+host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.yaml
 ```
 
 This command starts a monitoring web application on the host machine.
@@ -26,7 +26,7 @@ To use a different port for the monitoring service, specify the port explicitly:
 
 ```sh
 host-pc$ cd ~/workspace/tool-model-to-pipeline
-host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.sima -p 5001
+host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.yaml -p 5001
 ```
 
 ## Run individual stages

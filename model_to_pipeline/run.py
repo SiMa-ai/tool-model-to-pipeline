@@ -151,13 +151,40 @@ def start_monitor(port=5000):
 # Main
 # ------------------------------------------------------------
 
+def write_sima_file(yaml_arg: str) -> Path:
+    """
+    Create a .sima file in /tmp using the YAML path exactly as provided.
+    """
+    sima_path = Path("/tmp") / f"{Path(yaml_arg).stem}.sima"
+
+    sima_contents = f"""# auto-generated.sima
+
+model
+{{
+        cd /home/docker/sima-cli/tool-model-to-pipeline \\
+        && .model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml {yaml_arg}
+}}
+
+mpk
+{{
+        cd /home/docker/sima-cli/tool-model-to-pipeline \\
+        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml {yaml_arg}
+}}
+
+echo "✅ All done!"
+"""
+
+    sima_path.write_text(sima_contents)
+    return sima_path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run a SiMa pipeline with monitoring support."
     )
     parser.add_argument(
-        "run_file",
-        help="Path to run YAML (.sima) or filename.sima",
+        "yaml",
+        help="Path to run yaml input file (container-relative path)",
     )
     parser.add_argument(
         "-p",
@@ -169,8 +196,9 @@ def main():
 
     args = parser.parse_args()
 
-    sima_run_file = resolve_sima_run_file(args.run_file)
+    yaml_arg = args.yaml  # keep exactly as passed
     sima_cli = resolve_sima_cli()
+    sima_file = write_sima_file(yaml_arg)
 
     def cleanup(*_):
         stop_monitor()
@@ -182,11 +210,11 @@ def main():
     start_monitor(port=args.port)
 
     print("⚙️  Running workflow:")
-    print(f"    {sima_cli} sdk run {sima_run_file}")
+    print(f"    {sima_cli} sdk run {sima_file}")
 
     try:
         subprocess.run(
-            [sima_cli, "sdk", "run", str(sima_run_file)],
+            [sima_cli, "sdk", "run", str(sima_file)],
             check=True,
         )
     finally:
