@@ -161,7 +161,7 @@ def install_in_model_sdk(python_bin: Path) -> None:
     info("Installing Model SDK dependencies")
 
     run([python_bin, "-m", "pip", "install", "-r", MODEL_REQ])
-    run([python_bin, "-m", "pip", "install", "ultralytics", "--no-deps"])
+    run([python_bin, "-m", "pip", "install", "ultralytics==8.3.145", "--no-deps"])
     run([python_bin, "-m", "pip", "install", "."])
 
 
