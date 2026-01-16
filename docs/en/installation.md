@@ -46,6 +46,8 @@ sima-user@sima-user-machine:~$ cd ~/workspace
 sima-user@sima-user-machine:~$ sima-cli install gh:sima-ai/tool-model-to-pipeline
 ```
 
+Change to your own local workspace folder if you are not using the default `~/workspace`.
+
 This command will install the model-to-pipeline tool in three difference places:
 
 1. The host machine itself
