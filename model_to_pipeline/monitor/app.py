@@ -32,6 +32,7 @@ import logging
 import argparse
 import tarfile
 import tempfile
+import subprocess
 
 # -------------------------
 # Paths & Config
