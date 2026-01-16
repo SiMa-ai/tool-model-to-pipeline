@@ -28,7 +28,7 @@ import json
 
 STATE_FILE = os.environ.get(
     "MODEL_TO_PIPELINE_STATE_FILE",
-    "/home/docker/sima-cli/model-to-pipeline-state.json",
+    "/home/docker/sima-cli/tool-model-to-pipeline/.model-to-pipeline-state.json",
 )
 
 def write_state(update: dict[str, str]) -> None:

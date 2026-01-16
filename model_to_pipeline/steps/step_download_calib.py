@@ -28,6 +28,7 @@ import os
 from pathlib import Path
 from model_to_pipeline.steps.steps_base import StepBase
 from model_to_pipeline.constants.calib_dataset import imgIds
+from model_to_pipeline.utils.state import write_state
 import requests
 
 
@@ -86,6 +87,7 @@ class StepDownloadModel(StepBase):
                     with open(img_filename, 'wb') as f:
                         f.write(img_data)
                 logging.info(f"✅ Calibration images downloaded successfully to {calib_dir}")
+                write_state({'calibration_data_path': calib_dir})
 
             except Exception as e:
                 logging.error(f"Failed to download calibration dataset: {e}. \n Provide the local path to the calibration dataset using --calibration-data-path")
@@ -93,4 +95,5 @@ class StepDownloadModel(StepBase):
                 return False
 
         logging.info(f"Calibration {args.calibration_data_path} already exists... Skipping downloading")
+        write_state({'calibration_data_path': args.calibration_data_path})
         return True
