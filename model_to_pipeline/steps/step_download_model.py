@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -48,22 +48,73 @@ class StepDownloadModel(StepBase):
         Returns:
             bool: True if the Download Model was successful, False otherwise.
         """
-        logging.info(f"Checking if model {args.model_path} is available or not.")
-        if not Path(args.model_path).exists():
-            logging.info(f"Model {args.model_path} not found. Downloading...")
-            import ultralytics # type: ignore
+        logging.info(f"Checking if model {args.model_path} is available.")
+
+        import shutil
+        import ultralytics
+
+        target_path = Path(args.model_path)
+        model_file_name = target_path.name
+        model_stem = target_path.stem
+
+        # --------------------------------------------------
+        # Case 1: Local .pt model → export to ONNX
+        # --------------------------------------------------
+        if target_path.suffix == ".pt":
+            logging.info(f"Exporting local PyTorch model {target_path} to ONNX")
+
+            model = ultralytics.YOLO(str(target_path))
+            model.export(format="onnx", opset=13)
+
+            exported_onnx = Path.cwd() / f"{model_stem}.onnx"
+            if not exported_onnx.exists():
+                logging.error(f"Expected ONNX not found: {exported_onnx}")
+                return False
+
+            target_onnx = target_path.with_suffix(".onnx")
+            shutil.move(str(exported_onnx), target_onnx)
+
+            args.model_path = str(target_onnx)
+            logging.info(f"Exported ONNX model to {args.model_path}")
+            return True
+
+        # --------------------------------------------------
+        # Case 2: ONNX does not exist → download & export
+        # --------------------------------------------------
+        if not target_path.exists():
+            logging.info(f"Model {target_path} not found. Downloading via Ultralytics.")
 
             try:
-                model = ultralytics.YOLO(
-                    os.path.splitext(os.path.basename(args.model_path))[0]
+                model = ultralytics.YOLO(model_stem)
+                model.export(
+                    format="onnx",
+                    opset=13,
+                    simplify=False,
+                    dynamic=False,
+                    imgsz=640,
                 )
-                model.export(format="onnx", opset=13, simplify=False, dynamic=False, imgsz=640)
-                logging.info(
-                    f"Model {args.model_name} downloaded successfully to {args.model_path}."
-                )
+
+                exported_onnx = Path.cwd() / f"{model_stem}.onnx"
+                if not exported_onnx.exists():
+                    raise RuntimeError(
+                        f"Expected exported ONNX not found: {exported_onnx}"
+                    )
+
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(exported_onnx), target_path)
+
+                logging.info(f"Model downloaded and exported to {target_path}")
                 return True
+
             except Exception as e:
-                logging.error(f"Failed to download model {args.model_name}: {e}")
+                logging.exception(
+                    f"Failed to download/export model {args.model_name}: {e}"
+                )
                 return False
-        logging.info(f"Model {args.model_path} already exists... Skipping downloading")
+
+        # --------------------------------------------------
+        # Case 3: Model already exists
+        # --------------------------------------------------
+        logging.info(f"Model {target_path} already exists. Skipping download.")
         return True
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 SiMa.ai
+ * Copyright (c) 2026 SiMa.ai
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -26,6 +26,8 @@
 let currentStream = null;
 let logBuffer = [];
 let flushTimer = null;
+let statsLoaded = false;
+let statsAvailable = false;
 
 /* --------------------------------------------------------------------------
    Frontend Script for Model-to-Pipeline Monitor
@@ -161,6 +163,12 @@ function updateStepStates() {
     .then(states => {
       window.currentStates = states;
 
+      if (states.compile === "success") {
+        if (statsAvailable == false) {
+          statsAvailable = true;
+          loadModelStatsIfReady();
+        }
+      }
       // Reset all steps
       document.querySelectorAll(".step").forEach(step => {
         step.classList.remove("in-progress", "success", "fail", "disabled");

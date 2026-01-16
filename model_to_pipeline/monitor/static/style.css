@@ -4,7 +4,7 @@
 body {
   font-family: 'Roboto', sans-serif !important;
   background: #f9f9f9;
-  padding: 30px;
+  margin: 0;
   text-align: center;
   color: #333;
 }
@@ -161,4 +161,113 @@ table {
   font-size: 13px;
   color: #222;
   display: inline-block;
+}
+
+
+/* ================================
+   Banner
+================================ */
+.app-banner {
+  background: #0d6efd;
+  color: white;
+  padding: 16px 30px;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.app-banner h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* ================================
+   App Layout
+================================ */
+.app-layout {
+  display: flex;
+  margin-top: 20px;
+}
+
+/* ================================
+   Sidebar
+================================ */
+.sidebar {
+  width: 220px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px 10px;
+  margin-right: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  height: fit-content;
+}
+
+.sidebar .nav-link {
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 8px;
+  border-radius: 6px;
+}
+
+.sidebar .nav-link.active {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+/* ================================
+   Main Content Area
+================================ */
+.main-content {
+  flex: 1;
+}
+
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  background-color: #3498db;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn:hover {
+  background-color: #2c80b4;
+}
+
+#searchBox {
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#threshold-slider {
+  width: 200px;
+  vertical-align: middle;
+}
+
+#threshold-label {
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+#viewSelector {
+  margin-left: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#viewSelector:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 4px rgba(52,152,219,0.5);
 }

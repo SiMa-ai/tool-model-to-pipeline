@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -20,21 +20,107 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+#
+# Copyright (c) 2026 SiMa.ai
 
-from flask import Flask, render_template, request, abort
-import os, re, glob
-from threading import Thread
-from werkzeug.serving import make_server
-import logging, sys
-import time
-from flask import Response, stream_with_context, abort
-import socket
+from flask import Flask, render_template, request, abort, Response, stream_with_context, jsonify
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import os, re, glob, json, time, socket, logging
+from datetime import datetime
+import logging
+import argparse
+import tarfile
+import tempfile
+import subprocess
+import yaml
+
+# -------------------------
+# Paths & Config
+# -------------------------
+def get_modelsdk_host_workspace() -> str:
+    """
+    Locate the ModelSDK container and return the host path
+    mounted at /home/docker/sima-cli.
+
+    Returns:
+        str: Host-side source path (e.g. /home/jim/workspace)
+
+    Raises:
+        RuntimeError: If container or mount cannot be found
+    """
+
+    # 1. Find modelsdk container
+    try:
+        ps = subprocess.check_output(
+            ["docker", "ps", "--format", "{{.ID}} {{.Names}}"],
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("Failed to run docker ps") from e
+
+    # looking for the first model SDK container instance for now, will need to expand to support multiple versions of containers
+    container_id: Optional[str] = None
+    for line in ps.strip().splitlines():
+        cid, name = line.split(maxsplit=1)
+        if "modelsdk" in name.lower():
+            container_id = cid
+            break
+
+    if not container_id:
+        raise RuntimeError("ModelSDK container not found (name containing 'modelsdk')")
+
+    # 2. Inspect mounts
+    try:
+        mounts_json = subprocess.check_output(
+            ["docker", "inspect", container_id, "--format", "{{ json .Mounts }}"],
+            text=True
+        )
+        mounts = json.loads(mounts_json)
+    except Exception as e:
+        raise RuntimeError("Failed to inspect container mounts") from e
+
+    # 3. Find desired mount
+    for m in mounts:
+        if m.get("Destination") == "/home/docker/sima-cli":
+            source = m.get("Source")
+            if source:
+                return source
+
+    raise RuntimeError(
+        "Mount to /home/docker/sima-cli not found in ModelSDK container"
+    )
+
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+try:
+    WORKSPACE_DIR = get_modelsdk_host_workspace()
+except Exception as e:
+    WORKSPACE_DIR = os.path.expanduser("~/workspace")
+
+STATE_FILE = os.path.join(WORKSPACE_DIR, "tool-model-to-pipeline", ".model-to-pipeline-state.json")
+STATE_DIR = os.path.dirname(STATE_FILE) or "."
+
+TOOL_DIR = os.path.join(WORKSPACE_DIR, 'tool-model-to-pipeline')
+LOG_DIR = os.path.join(TOOL_DIR, 'logs')
+
+# -------------------------
+# Flask App
+# -------------------------
+
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+
+# Shared state (authoritative)
+STEP_STATES = {}
+
+# -------------------------
+# UI Steps
+# -------------------------
 
 steps = [
     {"id": 1, "name": "Specification", "icon": "spec.svg"},
@@ -46,11 +132,13 @@ steps = [
     {"id": 7, "name": "MPK Compilation", "icon": "calibration.svg"},
 ]
 
+# -------------------------
+# Helpers
+# -------------------------
+
 def get_host_ip():
-    """Get the primary local IP address (not 127.0.0.1)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Doesn't need to be reachable
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
     except Exception:
@@ -125,25 +213,120 @@ def parse_yaml_as_sections(filepath):
 
     return sections
 
-
 def find_latest_log(prefix: str):
-    pattern = os.path.join('logs', f"{prefix}_*.log")
+    pattern = os.path.join(LOG_DIR, f"{prefix}_*.log")
     matches = glob.glob(pattern)
-    if not matches:
-        return None
-    return max(matches, key=os.path.getmtime)
+    return max(matches, key=os.path.getmtime) if matches else None
+
+
+def reset_state_file():
+    """Reset JSON state file and in-memory state."""
+    global STEP_STATES
+    STEP_STATES = {}
+
+    try:
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        with open(STATE_FILE, "w") as f:
+            json.dump({}, f)
+        logging.info("[state] reset to empty")
+    except Exception as e:
+        logging.warning("[state] failed to reset: %s", e)
+
+def load_state_file():
+    """Load JSON state file safely."""
+    global STEP_STATES
+    try:
+        with open(STATE_FILE, "r") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            STEP_STATES = data
+            logging.info("[state] updated: %s", data)
+    except Exception as e:
+        logging.warning("[state] failed to load: %s", e)
+
+
+# -------------------------
+# Watchdog Handler
+# -------------------------
+
+class StateFileHandler(FileSystemEventHandler):
+    def _handle(self, path):
+        if os.path.abspath(path) == os.path.abspath(STATE_FILE):
+            load_state_file()
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            self._handle(event.src_path)
+
+    def on_created(self, event):
+        if not event.is_directory:
+            self._handle(event.src_path)
+
+    def on_moved(self, event):
+        self._handle(event.dest_path)
+
+
+def start_state_watcher():
+    os.makedirs(STATE_DIR, exist_ok=True)
+
+    handler = StateFileHandler()
+    observer = Observer()
+    observer.schedule(handler, path=STATE_DIR, recursive=False)
+    observer.start()
+
+    logging.info("[watchdog] watching %s", STATE_FILE)
+    return observer
+
+
+# -------------------------
+# Flask Routes
+# -------------------------
+@app.route("/")
+def index():
+    yaml_file = request.args.get("input")
+    yaml_sections = []
+
+    # 1️⃣ Fallback to STATE_FILE if no input arg
+    if not yaml_file and os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+            yaml_file = state.get("yaml")
+        except Exception as e:
+            app.logger.exception("Failed to read state file: %s", e)
+            yaml_file = None
+
+    # 2️⃣ Load YAML sections if we have a yaml file
+    if yaml_file:
+        try:
+            yaml_sections = parse_yaml_as_sections(yaml_file) or []
+        except Exception as e:
+            app.logger.exception("Failed to parse YAML: %s", e)
+            yaml_sections = []
+
+    return render_template(
+        "index.html",
+        steps=steps,
+        yaml_file=yaml_file,
+        yaml_sections=yaml_sections,
+    )
+
+
+@app.route("/state")
+def state():
+    return STEP_STATES
+
 
 @app.route("/logs/<prefix>")
 def get_log(prefix):
     filepath = find_latest_log(prefix)
     if not filepath:
-        abort(404, f"No log found for prefix: {prefix}")
+        abort(404)
+    return {
+        "filename": os.path.basename(filepath),
+        "content": open(filepath).read(),
+    }
 
-    with open(filepath, "r") as f:
-        content = f.read()
-
-    filename = os.path.basename(filepath)
-    return {"filename": filename, "content": content}
 
 @app.route("/logs/<prefix>/stream")
 def stream_log(prefix):
@@ -158,113 +341,140 @@ def stream_log(prefix):
             for line in f:
                 yield f"data: {line.rstrip()}\n\n"
 
-        # --- Check state: only stream live if still active ---
-        states = {}
-        if hasattr(app, "server_thread"):
-            states = app.server_thread.get_state()
-
-        step_state = states.get(prefix)
-        if step_state != "started":
-            # Step is done → stop streaming
-            return
-
-        # --- Tail mode: stream new lines until state is not active ---
         with open(filepath, "r") as f:
             f.seek(0, os.SEEK_END)
-            while True:
-                # Re-check state each loop
-                states = {}
-                if hasattr(app, "server_thread"):
-                    states = app.server_thread.get_state()
-
-                step_state = states.get(prefix)
-                if step_state != "started":
-                    break
-
+            while STEP_STATES.get(prefix) == "started":
                 line = f.readline()
                 if line:
                     yield f"data: {line.rstrip()}\n\n"
                 else:
-                    # Send a raw heartbeat/progress tick (not parsed as event)
-                    yield ".\n\n"
                     time.sleep(1)
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
+def find_file_recursive(base_dir, name_substring):
+    """
+    Recursively find the first file containing the substring in its name (case-insensitive).
+    Example: find_file_recursive('/tmp/foo', 'mla_stats.yaml')
+    """
+    lower_sub = name_substring.lower()
+    for root, _, files in os.walk(base_dir):
+        for fname in files:
+            if lower_sub in fname.lower():
+                return os.path.join(root, fname)
+    return None
 
-@app.route("/state")
-def state():
-    if not hasattr(app, "server_thread"):
-        return {}
-    return app.server_thread.get_state()
 
-@app.route("/")
-def index():
-    yaml_file = request.args.get("input", None)
-    yaml_sections = parse_yaml_as_sections(yaml_file) if yaml_file else []
-    return render_template(
-        "index.html",
-        steps=steps,
-        yaml_file=yaml_file,
-        yaml_sections=yaml_sections
-    )
+def load_ops_from_file(extract_dir):
+    """Find and parse *any* mla_stats.yaml file inside the extracted directory."""
+    stats_path = find_file_recursive(extract_dir, "mla_stats.yaml")
+    if not stats_path:
+        print(f"⚠️ No file matching '*mla_stats.yaml' found in {extract_dir}")
+        return []
 
-# --- Threaded Server Wrapper ---
-class ServerThread(Thread):
-    def __init__(self, app, host="0.0.0.0", port=5000, config_yaml=None):
-        Thread.__init__(self)
-        self.srv = make_server(host, port, app)
-        self.ctx = app.app_context()
-        self.ctx.push()
-        self.daemon = True
-        app.server_thread = self
-
-        # Track state of steps
-        self.step_states = {}
-
-        ip = get_host_ip()
-        url = f"http://{ip}:{port}?input={config_yaml}"
-        print(f"Monitor Server running at \033[1;34m{url}\033[0m")
-
-    def update_state(self, step_name: str, state) -> None:
-        """Update the state of a step (started, success, fail, etc.)."""
-        self.step_states[step_name] = state
-        logging.info(f"[Monitor] Step {step_name} → {state}")
-
-    def get_state(self):
-        return self.step_states
-
-    def run(self):
-        print(f"Starting Flask server on port {self.srv.port} ...")
+    print(f"📄 Found MLA stats file: {stats_path}")
+    with open(stats_path, "r") as f:
         try:
-            self.srv.serve_forever()
+            data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            print(f"❌ YAML parse error in {stats_path}: {e}")
+            return []
+
+    ops = []
+    for idx, item in data.items():
+        try:
+            duration = item["end_cycle"] - item["start_cycle"]
+            ops.append({
+                "idx": int(idx),
+                "name": item["name"],
+                "start_cycle": item["start_cycle"],
+                "end_cycle": item["end_cycle"],
+                "duration": duration,
+            })
         except Exception as e:
-            logging.exception("Exception in Flask server thread: %s", e)
+            print(f"⚠️ Skipped invalid entry {idx}: {e}")
+    return ops
 
-    def shutdown(self):
-        print("Shutting down Flask server...")
-        self.srv.shutdown()
+@app.route("/model_stats")
+def model_stats():
+    # 1️⃣ Load state file
+    if not os.path.exists(STATE_FILE):
+        abort(404, "State file not found")
 
+    try:
+        with open(STATE_FILE, "r") as f:
+            state = json.load(f)
+    except Exception as e:
+        abort(500, f"Failed to read state file: {e}")
+
+    model_file = state.get("model_file")
+    if not model_file:
+        abort(404, "Model not ready yet")
+
+    # 2️⃣ Resolve model path (absolute or relative)
+    if os.path.isabs(model_file):
+        model_path = model_file
+    else:
+        model_path = os.path.join(TOOL_DIR, model_file)
+
+    if not os.path.exists(model_path):
+        abort(404, f"Model file not found: {model_path}")
+
+    # 3️⃣ Extract tar.gz into /tmp
+    if not tarfile.is_tarfile(model_path):
+        abort(400, "Model file is not a valid tar archive")
+
+    extract_dir = tempfile.mkdtemp(prefix="model_stats_")
+
+    try:
+        with tarfile.open(model_path, "r:*") as tar:
+            tar.extractall(path=extract_dir)
+    except Exception as e:
+        abort(500, f"Failed to extract model archive: {e}")
+
+    ops = load_ops_from_file(extract_dir)
+    return jsonify(ops)
+
+# -------------------------
+# Main
+# -------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Model-to-Pipeline Monitor")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="Port to run the monitor server on (default: 5000)"
+    )
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    import argparse, time
+    args = parse_args()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--threaded", action="store_true", help="Run Flask in a background thread")
-    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
 
-    if args.threaded:
-        # Run using ServerThread
-        server = ServerThread(app, port=5000)
-        server.start()
-        print("Flask server running in a thread... press Ctrl+C to stop.")
+    # Load initial state if file exists
+    if os.path.exists(STATE_FILE):
+        load_state_file()
 
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            server.shutdown()
-            print("Server stopped.")
-    else:
-        # Run standalone
-        app.run(debug=True, host="0.0.0.0", port=5000)
+    # Start watchdog
+    reset_state_file()
+    observer = start_state_watcher()
+
+    try:
+        ip = get_host_ip()
+        print(
+            f"Monitor running at "
+            f"\033[1;34mhttp://{ip}:{args.port}\033[0m"
+        )
+
+        app.run(
+            host="0.0.0.0",
+            port=args.port,
+            debug=True
+        )
+    finally:
+        observer.stop()
+        observer.join()
+

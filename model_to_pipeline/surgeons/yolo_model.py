@@ -1,7 +1,7 @@
 from pathlib import Path
 import onnx
 import numpy as np
-import sima_utils.onnx.onnx_helpers as oh
+import model_to_pipeline.utils.onnx_helpers as oh
 
 class YOLOModel:
     def __init__(self, onnx_path):

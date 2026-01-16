@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -26,8 +26,21 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 
+is_model_sdk = False
+
+try:
+    from afe.apis.defines import QuantizationParams
+    print(f'model_sdk docker detected.')
+    is_model_sdk = True
+except ImportError:
+    print(f'mpk_cli docker detected.')
+    is_model_sdk = False
+
 def read_requirements():
-    requirements_path = Path(__file__).parent / "requirements.txt"
+    if is_model_sdk:
+        requirements_path = Path(__file__).parent / "requirements_modelsdk.txt"
+    else:
+        requirements_path = Path(__file__).parent / "requirements_mpkcli.txt"
     if requirements_path.exists():
         print(f"Reading requirements from {requirements_path}")
         return requirements_path.read_text().splitlines()

@@ -1,0 +1,7 @@
+loguru==0.7.3
+typer==0.16.0
+rich
+paramiko
+scp
+pydantic==2.12.5
+pydantic-core==2.41.5

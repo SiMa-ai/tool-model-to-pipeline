@@ -6,11 +6,14 @@
     "platforms": [
         {
             "type": "palette"
+        },
+        {
+            "type": "host", 
+            "os": ["windows", "linux"]
         }
-        
     ],
     "resources": [
-        "gh:sima-ai/tool-model-to-pipeline"
+        "gh:sima-ai/tool-model-to-pipeline@2.0_prep"
     ],
     "selectable-resources":
     [
@@ -20,7 +23,7 @@
         "install": "200KB"
     },
     "installation": {
-        "script": " cd tool-model-to-pipeline && ./install.sh",
-        "post-message": "[bold]Supported Yolo models:[/bold]\n- yolov8n, yolov8m, yolov8l\n- yolov9t, yolov9s, yolov9m, yolov9c\n- yolov10n, yolov10s, yolov10m, yolov10b, yolov10x\n- yolo11n, yolo11s, yolo11m, yolo11l\n\n[bold]Run pipeline creation (example with YOLOv9c):[/bold]\n\n[green]cd tool-model-to-pipeline\nsima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c.yaml[/green]\n"
+        "script": " cd tool-model-to-pipeline && python3 install.py",
+        "post-message": ""
     }
 }

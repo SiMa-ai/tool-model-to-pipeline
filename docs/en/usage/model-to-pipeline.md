@@ -1,22 +1,104 @@
 ## model-to-pipeline
 
+**model-to-pipeline** is a two-stage workflow that converts an FP32 model into a deployable pipeline executable for **SiMa hardware**.
+
+- **Stage 1**: Quantize and compile the model inside the **Model SDK container**.
+- **Stage 2**: Package and build the deployable **pipeline binary (MPK)**.
+
+The workflow is driven by a YAML-based configuration file.
+
+### Running the workflow
+
 ```sh
-$ sima-model-to-pipeline model-to-pipeline --help
+host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
+host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.yaml
+```
+
+This command starts a monitoring web application on the host machine.
+Access the monitor at:
+```sh
+http://<host-ip>:5000
+```
+
+The monitor provides real-time visibility into model retrieval, quantization, compilation, and pipeline build progress.
+
+To use a different port for the monitoring service, specify the port explicitly:
+
+```sh
+host-pc$ cd ~/workspace/tool-model-to-pipeline
+host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.yaml -p 5001
+```
+
+See the following screenshots for reference.
+
+![monitor](monitor.jpg)
+
+Once model compilation step is completed, user can view the operator cycle stats in the following view.
+
+![model-stats](model-stats.jpg)
+
+## Run individual stages
+
+Alternatively, the developer can run individual stages by going directly into the respective SDK container.
+
+First, start the monitor session and open http://host:5000 in the browser.
+
+```sh
+host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
+host-pc$ python3 model-to-pipeline/monitor/app.py
+```
+
+**Running quantization and compilation stage**
+
+```sh
+host-pc:~$ sima-cli sdk model
+⚠️  You have disabled update check with SIMA_CLI_CHECK_FOR_UPDATE environment variable, skipping sima-cli update check..
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+▶ Executing command in container: vdp-cli-modelsdk-2.0.0_palette_sdk_master_b240
+=============================================================
+ 🚀 Welcome to the ModelSDK Container 
+ 
+ ⚠️  IMPORTANT NOTICE:
+ Please keep all your work in the mounted path:
+     /home/docker/sima-cli 
+ to avoid losing files if the container is removed accidentally.
+=============================================================
+user@vdp-cli-modelsdk:/home/docker/sima-cli$ cd tool-model-to-pipeline/
+user@vdp-cli-modelsdk:/home/docker/sima-cli/tool-model-to-pipeline$ sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov8m/yolov8m.yaml 
+
+```
+
+**Running pipeline building stage**
+
+```sh
+host-pc:~/workspace$ sima-cli sdk mpk
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+▶ Executing command in container: vdp-cli-mpk_cli_toolset-2.0.0_palette_sdk_master_b240
+=============================================================
+ 🚀 Welcome to the Palette SDK Container 
+ 
+ ⚠️  IMPORTANT NOTICE:
+ Please keep all your work in the mounted path:
+     /home/docker/sima-cli 
+ to avoid losing files if the container is removed accidentally.
+=============================================================
+user@vdp-cli-mpk_cli_toolset:/home/docker/sima-cli$ cd tool-model-to-pipeline/
+yser@vdp-cli-mpk_cli_toolset:/home/docker/sima-cli/tool-model-to-pipeline$ sima-model-to-pipeline model-to-pipeline  --config-yaml samples/yolov8m/yolov8m.yaml
+```
+
+## Command line options
+
+Alternatively, without using yaml file, the developer can directly run the model-to-pipeline line tool by providing arguments.
+
+```sh
+$ user@vdp-cli-modelsdk: sima-model-to-pipeline model-to-pipeline --help
 
  Usage: sima-model-to-pipeline model-to-pipeline [OPTIONS]
 ```
-
-Most commonly, the command is run with a sample [YAML input file](samples/yolov9c.yaml):
-
-```sh
-$ sima-model-to-pipeline model-to-pipeline --config-yaml samples/yolov9c.yaml
-```
-
-* This will run and do graph surgery on vanilla `<mymodel>.onnx` and create `<mymodel>_mod.onnx`.
-* Using the model post surgery, the tool will compile the model to generate `.elf` file.
-* Using this generated `.elf` file, the tool will create a mini pipeline using `mpk project create`
-
-This tool also supports command line argument in case user wants a finer-grained control.
 
 | Option | Type / Choices | Description | Default |
 |--------|----------------|-------------|---------|
@@ -66,38 +148,166 @@ This tool also supports command line argument in case user wants a finer-grained
 
 ## Progress and Summary
 
-While running, the timer clock keeps showing the elapsed time and a progress bar indicating the process is still running. This gives the summary at the end of execution as below.
+When the process is started, the yaml content is formatted and displayed in the console, giving developers an overview of the input. For example, the yolov8m example [here](../../../samples/yolov8m/yolov8m.yaml) is displayed as following. This content is also displayed in the monitoring web app.
 
-A monitor server is started automatically providing a more comphrensive interface for user to view the logs as the tool processes through the model. Copy and paste the server into a browser on the host side to access the monitor server.
 
 ```sh
-Monitor server running at http://172.18.0.2:5000?input=yolov8m.yaml
-Starying Flask server on port 5000 ...
+General
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                        ┃ Value            ┃ Description                                                                                    ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ pipeline_name                │ yolov8m          │ Name for the generated pipeline (user-defined)                                                 │
+└──────────────────────────────┴──────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Model configuration
+┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                   ┃ Value            ┃ Description                                                                                         ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ model_params.model_path │ yolov8m.onnx     │ Path to the ONNX file. (If missing and it's a YOLO model, it will be auto-downloaded from           │
+│                         │                  │ Ultralytics)                                                                                        │
+├─────────────────────────┼──────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ model_params.model_name │ yolov8           │ Base model name without the version suffix (e.g., n, s, m, c, l, x)                                 │
+├─────────────────────────┼──────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ model_params.model_type │ object-detection │ Model category (currently not used). Options: object-detection, image-classification, segmentation  │
+└─────────────────────────┴──────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Input size
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                                                                             ┃ Value                ┃ Description                           ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ model_params.input_width                                                          │ 1920                 │                                       │
+├───────────────────────────────────────────────────────────────────────────────────┼──────────────────────┼───────────────────────────────────────┤
+│ model_params.input_height                                                         │ 1080                 │                                       │
+└───────────────────────────────────────────────────────────────────────────────────┴──────────────────────┴───────────────────────────────────────┘
+
+Extra pipeline parameters
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                         ┃ Value                                 ┃ Description                                                              ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ extras.no_box_decode          │ ❌                                    │ Use detessdequant plugin instead of the default simaaiboxdecoder         │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.rtsp_src               │ rtsp://192.168.1.10:8554/mystream1    │ RTSP input stream (ignored for PCIe pipelines). Host: 192.168.1.10       │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.host_ip                │ 192.168.1.10                          │ Host settings for streaming back video (ignored for PCIe pipelines)      │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.host_port              │ 5000                                  │                                                                          │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.detection_threshold    │ 0.1                                   │ Minimum confidence score                                                 │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.nms_iou_threshold      │ 0.3                                   │ IOU threshold for non-max suppression                                    │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.topk                   │ 100                                   │ Keep top-k detections                                                    │
+├───────────────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┤
+│ extras.num_classes            │ 80                                    │                                                                          │
+└───────────────────────────────┴───────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────┘
+
+Compilation parameters
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                                                           ┃ Value        ┃ Description                                                     ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ compilation_params.compilation_result_dir                       │ result       │ Directory to save compilation results                           │
+├─────────────────────────────────────────────────────────────────┼──────────────┼─────────────────────────────────────────────────────────────────┤
+│ compilation_params.compiler                                     │ yolo         │ Compiler to use (e.g., yolo, resnet, etc.)                      │
+├─────────────────────────────────────────────────────────────────┼──────────────┼─────────────────────────────────────────────────────────────────┤
+│ compilation_params.batch_size                                   │ 1            │ Batch size for compilation                                      │
+├─────────────────────────────────────────────────────────────────┼──────────────┼─────────────────────────────────────────────────────────────────┤
+│ compilation_params.device_type                                  │ modalix      │ Target device type (davinci, modalix)                           │
+└─────────────────────────────────────────────────────────────────┴──────────────┴─────────────────────────────────────────────────────────────────┘
+
+Calibration settings (used during quantization)
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                                                           ┃ Value                                  ┃ Description                           ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ compilation_params.calibration_params.calibration_data_path     │ /home/docker/sima-cli/calibration_ima… │ Path (inside SDK container) to        │
+│                                                                 │                                        │ calibration dataset                   │
+├─────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼───────────────────────────────────────┤
+│ compilation_params.calibration_params.calibration_ds_extn       │ jpg                                    │ File extension of calibration images  │
+│                                                                 │                                        │ (`jpg`, `jpeg`, `png`, `webp`; mixed  │
+│                                                                 │                                        │ not supported)                        │
+├─────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼───────────────────────────────────────┤
+│ compilation_params.calibration_params.calibration_samples_count │ 100                                    │ Number of calibration samples to use  │
+│                                                                 │                                        │ (if None, use all available)          │
+├─────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼───────────────────────────────────────┤
+│ compilation_params.calibration_params.calibration_type          │ min_max                                │ Calibration method. Options:          │
+│                                                                 │                                        │ `min_max`, `moving_average`,          │
+│                                                                 │                                        │ `entropy`, `percentile`, `mse`        │
+└─────────────────────────────────────────────────────────────────┴────────────────────────────────────────┴───────────────────────────────────────┘
+
+Quantization settings
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Field                                                                     ┃ Value  ┃ Description                                                 ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ compilation_params.quant_config.arm_only                                  │ ❌     │ Compile for ARM only (set true for Arm-only build)          │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.activation_quant_config.act_asym          │ ✅     │ Asymmetric quantization                                     │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.activation_quant_config.act_per_ch        │ ❌     │ Per-channel quantization                                    │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.activation_quant_config.act_bf16          │ ❌     │ Use BF16 precision                                          │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.activation_quant_config.act_nbits         │ 8      │ Bit precision (8 or 16)                                     │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.weight_quant_config.wt_asym               │ ❌     │ Weight quantization options                                 │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.weight_quant_config.wt_per_ch             │ ✅     │                                                             │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.weight_quant_config.wt_bf16               │ ❌     │                                                             │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.weight_quant_config.wt_nbits              │ 8      │ Bit precision (8 or 16)                                     │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.bias_correction                           │ none   │ Bias correction method: `none`, `iterative`, `regular`      │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.ceq                                       │ ❌     │ Apply channel equalization                                  │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.smooth_quant                              │ ❌     │ Apply SmoothQuant technique                                 │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.mode                                      │ sima   │ Requantization mode: `sima` or `tflite`                     │
+├───────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────────────────────────────────┤
+│ compilation_params.quant_config.compress                                  │ ❌     │ Apply model compression                                     │
+└───────────────────────────────────────────────────────────────────────────┴────────┴─────────────────────────────────────────────────────────────┘
+```
+
+While running, the timer clock keeps showing the elapsed time and a progress bar indicating the process is still running. This gives the summary at the end of execution as below.
+
+**model compilation summary**
+```sh
 ✅ Completed : setup               : 0.10 sec
-✅ Completed : downloadmodel       : 7.24 sec
-✅ Completed : surgery             : 1.52 sec
+✅ Completed : downloadmodel       : 0.10 sec
+✅ Completed : surgery             : 3.19 sec
 ✅ Completed : downloadcalib       : 0.10 sec
-✅ Completed : compile             : 156.12 sec
-✅ Completed : pipelinecreate      : 0.80 sec
-✅ Completed : mpkcreate           : 74.96 sec
+✅ Completed : compile             : 211.90 sec
 
 
-      SiMa.ai Model to Pipeline Summary
-╭────────────────┬──────────────┬────────────╮
-│   Step Name    │ Elapsed Time │   Status   │
-├────────────────┼──────────────┼────────────┤
-│ downloadmodel  │     PASS     │  7.25 sec  │
-├────────────────┼──────────────┼────────────┤
-│    surgery     │     PASS     │  1.52 sec  │
-├────────────────┼──────────────┼────────────┤
-│ downloadcalib  │     PASS     │  0.11 sec  │
-├────────────────┼──────────────┼────────────┤
-│    compile     │     PASS     │ 156.13 sec │
-├────────────────┼──────────────┼────────────┤
-│ pipelinecreate │     PASS     │  0.81 sec  │
-├────────────────┼──────────────┼────────────┤
-│   mpkcreate    │     PASS     │ 74.97 sec  │
-╰────────────────┴──────────────┴────────────╯
+      SiMa.ai Model to Pipeline Summary      
+╭───────────────┬──────────────┬────────────╮
+│   Step Name   │ Elapsed Time │   Status   │
+├───────────────┼──────────────┼────────────┤
+│ downloadmodel │     PASS     │  0.10 sec  │
+├───────────────┼──────────────┼────────────┤
+│    surgery    │     PASS     │  3.19 sec  │
+├───────────────┼──────────────┼────────────┤
+│ downloadcalib │     PASS     │  0.10 sec  │
+├───────────────┼──────────────┼────────────┤
+│    compile    │     PASS     │ 211.90 sec │
+╰───────────────┴──────────────┴────────────╯
+                   Summary                   
+```
+
+**pipeline build summary**
+
+```sh
+✅ Completed : setup               : 0.10 sec
+✅ Completed : pipelinecreate      : 1.10 sec
+✅ Completed : mpkcreate           : 80.90 sec
+
+
+      SiMa.ai Model to Pipeline Summary      
+╭────────────────┬──────────────┬───────────╮
+│   Step Name    │ Elapsed Time │  Status   │
+├────────────────┼──────────────┼───────────┤
+│ pipelinecreate │     PASS     │ 1.11 sec  │
+├────────────────┼──────────────┼───────────┤
+│   mpkcreate    │     PASS     │ 80.90 sec │
+╰────────────────┴──────────────┴───────────╯
                    Summary
-
 ```

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -24,7 +24,6 @@
 import argparse
 import os
 import onnx
-from ev_transforms.transforms import resize
 from onnx import helper, numpy_helper
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
