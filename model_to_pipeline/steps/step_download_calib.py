@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -28,6 +28,7 @@ import os
 from pathlib import Path
 from model_to_pipeline.steps.steps_base import StepBase
 from model_to_pipeline.constants.calib_dataset import imgIds
+from model_to_pipeline.utils.state import write_state
 import requests
 
 
@@ -64,7 +65,7 @@ class StepDownloadModel(StepBase):
                 print('img_urls:', img_urls)
 
                 # Create output directory
-                output_dir = "/home/docker"
+                output_dir = "/home/docker/sima-cli"
                 calib_dir = os.path.join(output_dir, 'calibration_images')
                 args.calibration_data_path = calib_dir
 
@@ -86,6 +87,7 @@ class StepDownloadModel(StepBase):
                     with open(img_filename, 'wb') as f:
                         f.write(img_data)
                 logging.info(f"✅ Calibration images downloaded successfully to {calib_dir}")
+                write_state({'calibration_data_path': calib_dir})
 
             except Exception as e:
                 logging.error(f"Failed to download calibration dataset: {e}. \n Provide the local path to the calibration dataset using --calibration-data-path")
@@ -93,4 +95,5 @@ class StepDownloadModel(StepBase):
                 return False
 
         logging.info(f"Calibration {args.calibration_data_path} already exists... Skipping downloading")
+        write_state({'calibration_data_path': args.calibration_data_path})
         return True

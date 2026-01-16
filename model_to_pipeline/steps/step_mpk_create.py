@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -52,11 +52,7 @@ class StepMpkCreate(StepBase):
         logging.info(f"Python PATH: {os.environ['PATH']}")
 
 
-        # Optional: if you need to source any environment script
-        # env_setup = "source /home/docker/.bashrc"  # or source sdk/env.sh if needed
-        env_setup = "source /opt/poky/davinci/5.0.6/environment-setup-cortexa65-poky-linux"
-
-        command = f"unset LD_LIBRARY_PATH && {env_setup} && mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {args.device_type if args.device_type != 'both' else 'davinci'}"
+        command = f"unset LD_LIBRARY_PATH && mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {args.device_type if args.device_type != 'both' else 'davinci'}"
 
         source_path = os.path.abspath(os.path.join(os.getcwd(), args.pipeline_name))
         print("Source path exists:", os.path.exists(source_path))
@@ -69,7 +65,7 @@ class StepMpkCreate(StepBase):
         env = original_env.copy()
         env.pop("LD_LIBRARY_PATH", None)
 
-        command = f"unset LD_LIBRARY_PATH && {env_setup} && mpk create -s ./ -d ./ --clean --board-type {args.device_type}" #  if args.device_type != 'both' else 'davinci'}"
+        command = f"unset LD_LIBRARY_PATH && mpk create -s ./ -d ./ --clean --board-type {args.device_type}" #  if args.device_type != 'both' else 'davinci'}"
         logging.info(f"Executing command to create pipeline: {command}")
         op = subprocess.run(command, shell=True, \
                             executable="/bin/bash", \

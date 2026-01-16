@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -26,6 +26,7 @@ import logging
 from pathlib import Path
 import shutil
 from model_to_pipeline.compilers.compiler_base import CompilerBase
+from model_to_pipeline.utils.state import write_state
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -204,8 +205,9 @@ class CompileYoloGeneric(CompilerBase):
         compile_model = args.model_name + "_mpk.tar.gz"
         model_file = Path(args.compilation_result_dir) / board / compile_model
         logging.info(f"Renaming the model file: {model_file} to Pipeline Name: {args.pipeline_name}")
+        dst_file = str(Path(args.compilation_result_dir) / board / args.pipeline_name) + ".tar.gz"
         shutil.move(
             src=model_file,
-            dst=str(Path(args.compilation_result_dir) / board / args.pipeline_name)
-            + ".tar.gz",
+            dst=dst_file
         )
+        write_state({'model_file': dst_file})

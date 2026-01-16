@@ -1,4 +1,4 @@
-# Copyright (c) 2025 SiMa.ai
+# Copyright (c) 2026 SiMa.ai
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -21,32 +21,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# -----------------------------
+# Standard library
+# -----------------------------
 import argparse
-from pathlib import Path
+import logging
+import os
 import sys
 import time
-from typing import Optional
+import traceback
+from pathlib import Path
+from typing import Optional, Dict
+import tempfile
+import json
 
-import yaml
-from model_to_pipeline.compilers.compiler_base import CompilerMeta
+# -----------------------------
+# Third-party libraries
+# -----------------------------
 import typer
-
+import yaml
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from rich import box
-import logging
-import traceback
-from model_to_pipeline.utils.logger.logger import (
-    step_logger,
-)  # Assuming your logger setup is here
-from model_to_pipeline.steps.steps_base import StepMeta
-from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
-from model_to_pipeline.monitor.app import app, ServerThread
 
+# -----------------------------
+# Internal application imports
+# -----------------------------
+from model_to_pipeline.compilers.compiler_base import CompilerMeta
+from model_to_pipeline.steps.steps_base import StepMeta
+from model_to_pipeline.utils.logger.logger import step_logger
+from model_to_pipeline.utils.yaml_display import build_tables_from_yaml
+from model_to_pipeline.utils.state import write_state
 
 model_to_pipeline_app = typer.Typer()
-
 
 def run_step(
     step_name: str, args: argparse.Namespace, console: Console, max_name_len: int
@@ -110,11 +118,6 @@ def main(args: argparse.Namespace) -> None:
     steps = list(StepMeta.registry.items())
     max_name_len = max(len(name) for name, _ in steps)
     results = []
-    monitor_server = None
-
-    if args.config_yaml:
-        monitor_server = ServerThread(app, port=5000, config_yaml=args.config_yaml)
-        monitor_server.start()
 
     with step_logger(step_name="setup", log_dir="logs"):
         logging.info(args)
@@ -129,23 +132,32 @@ def main(args: argparse.Namespace) -> None:
         is_model_sdk = False
         logging.info(f"mpk_cli docker detected")
 
-    # model_sdk_steps = ['downloadmodel','surgery']
+    model_sdk_steps = ['downloadmodel','surgery', 'downloadcalib', 'compile']
     mpk_cli_steps = ['pipelinecreate', 'mpkcreate']
+
     for step_name, index in steps:
         logging.info(f'step_name:{step_name}, index:{index}')
+
         if args.step and args.step != step_name:
             continue
         if step_name in mpk_cli_steps and is_model_sdk:
-            logging.info(f'Skipping the {step_name}')
+            logging.info(f'Skipping the {step_name} in this container because it is not meant to run here')
+            continue
+        if step_name in model_sdk_steps and not is_model_sdk:
+            logging.info(f'Skipping the {step_name} in this container because it is not meant to run here')
             continue
 
+        write_state({step_name: 'started'})
         start_time = time.time()
         success = run_step(step_name, args, console, max_name_len)
         elapsed = time.time() - start_time
         results.append((step_name, success, elapsed))
 
-        if monitor_server:
-            monitor_server.update_state(step_name, "success" if success else "fail")
+        status = "success" if success else "fail"
+        write_state({step_name: status})
+
+    overall = "success" if all(s for _, s, _ in results) else "fail"
+    write_state({"__overall__": overall})
 
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
@@ -172,11 +184,6 @@ def main(args: argparse.Namespace) -> None:
     console.print(table)
     console.print("\n[bold underline][/bold underline]")
 
-    if monitor_server:        
-        print("\n✅ Process completed, press any key to exit...")
-        input()
-        monitor_server.shutdown()
-
 
 @model_to_pipeline_app.command("model-to-pipeline")
 def run(
@@ -187,7 +194,7 @@ def run(
     yocto: Optional[bool] = typer.Option(
         False, help="enable this flag to build pipeline for yocto targets"
     ),
-	qid: Optional[int] = typer.Option(
+    qid: Optional[int] = typer.Option(
         0, help="provide the queue_id to build multiple pipelines for PCIe based applications"
     ),
     model_name: Optional[str] = typer.Option(
@@ -227,7 +234,7 @@ def run(
         metavar="/".join(list(CompilerMeta.registry.keys())),
     ),
     calibration_data_path: Optional[str] = typer.Option(
-        "/home/docker/calibration_images", help="Path to the calibration dataset."
+        "/home/docker/sima-cli/calibration_images", help="Path to the calibration dataset."
     ),
     calibration_samples_count: Optional[int] = typer.Option(
         None, help="Max number of calibration samples."
@@ -347,7 +354,7 @@ def run(
     """Runs the tool to convert the model into a working pipeline"""
     args = argparse.Namespace()
     args.yocto = yocto
-	args.qid = qid
+    args.qid = qid
     args.model_path = model_path
     args.model_name = model_name
     args.post_surgery_model_path = post_surgery_model_path
@@ -412,6 +419,7 @@ def run(
             logging.info(
                 f"Overriding the params from commandline with parameters from {config_yaml}"
             )
+            write_state({'yaml': config_yaml})
             with open(config_yaml, "r") as config:
                 config_data = yaml.safe_load(config)
                 build_tables_from_yaml(config_yaml)
@@ -419,8 +427,8 @@ def run(
             args.pipeline_name = config_data.get("pipeline_name", "MyPipeline")
 
             args.yocto = config_data.get("yocto", False)
-			
-			args.qid = config_data.get("qid",0)
+            
+            args.qid = config_data.get("qid",0)
             # Overriding model params
             args.model_path = config_data.get("model_params", {}).get(
                 "model_path", model_path

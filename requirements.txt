@@ -1,9 +1,10 @@
 loguru==0.7.3
-ultralytics==8.3.145
 typer==0.16.0
-rich
+rich==14.0.0
 paramiko
 scp
-pydantic
-flask
-numpy==1.23.5
+pydantic==2.12.5
+flask==3.1.2
+watchdog==6.0.0
+psutil==7.2.1
+pyyaml==6.0.3

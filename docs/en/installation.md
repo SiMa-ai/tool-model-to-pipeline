@@ -15,18 +15,41 @@ Before installation, make sure your sima-cli is [up-to-date](https://docs.sima.a
 
 ## Install the tool
 
-To install inside the **Palette model SDK** environment:
-
+First make sure you have installed the Palette SDK:
 ```bash
-sima-cli sdk model 
-sima-cli install gh:sima-ai/tool-model-to-pipeline
-source ~/.bashrc
+sima-user@sima-user-machine:~$ sima-cli install sdk
 ```
 
-To install inside the **Palette mpk-cli SDK** environment:
+Make sure you selected `Model SDK`, `MPK CLI` and `Elxr SDK` during the SDK installation. To verify the SDK installation:
 
 ```bash
-sima-cli sdk mpk 
-sima-cli install gh:sima-ai/tool-model-to-pipeline
-source ~/.bashrc
+(.venv) sima-user@sima-user-machine:~/workspace/tool-model-to-pipeline$ sima-cli sdk ls
+🔧 Environment: host (linux)
+🖥️  Detected platform: Linux
+✅ Docker daemon is running.
+
+                 📦 Installed SDK Containers                 
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ SDK             ┃ Version                       ┃ Running ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ yocto           │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
+│ mpk_cli_toolset │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
+│ modelsdk        │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
+│ elxr            │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
+└─────────────────┴───────────────────────────────┴─────────┘
 ```
+
+Then, install on the host machine in your workspace folder:
+
+```bash
+sima-user@sima-user-machine:~$ cd ~/workspace
+sima-user@sima-user-machine:~$ sima-cli install gh:sima-ai/tool-model-to-pipeline
+```
+
+Change to your own local workspace folder if you are not using the default `~/workspace`.
+
+This command will install the model-to-pipeline tool in three difference places:
+
+1. The host machine itself
+2. Model SDK container
+3. MPK SDK container

@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2026 SiMa.ai
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import os
+import sys
+import subprocess
+import platform
+from pathlib import Path
+
+MODEL_VENV_DIR = Path(".model_venv")
+MODEL_REQ = "requirements_modelsdk.txt"
+MPK_REQ = "requirements_mpkcli.txt"
+
+# ------------------------------------------------------------
+# Logging helpers
+# ------------------------------------------------------------
+
+def info(msg: str):
+    print(f"[INFO] {msg}")
+
+def die(msg: str):
+    print(f"[ERROR] {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+# ------------------------------------------------------------
+# Resolve sima-cli (stdlib only)
+# ------------------------------------------------------------
+
+def resolve_sima_cli() -> str:
+    env_override = os.environ.get("SIMA_CLI")
+    if env_override and Path(env_override).exists():
+        return env_override
+
+    # PATH lookup (cross-platform)
+    candidates = ["sima-cli.exe", "sima-cli"] if platform.system() == "Windows" else ["sima-cli"]
+    for c in candidates:
+        for p in os.environ.get("PATH", "").split(os.pathsep):
+            candidate = Path(p) / c
+            if candidate.exists() and os.access(candidate, os.X_OK):
+                return str(candidate)
+
+    venv_path = Path.home() / ".sima-cli" / ".venv" / "bin" / "sima-cli"
+    if venv_path.exists():
+        return str(venv_path)
+
+    return ""
+
+
+SIMA_CLI = resolve_sima_cli()
+if not SIMA_CLI:
+    die(
+        "sima-cli executable not found.\n"
+        "Tried:\n"
+        "  - $SIMA_CLI\n"
+        "  - PATH\n"
+        "  - ~/.sima-cli/.venv/bin/sima-cli\n\n"
+        "Fix by running:\n"
+        "  export SIMA_CLI=/full/path/to/sima-cli"
+    )
+
+info(f"Using sima-cli at: {SIMA_CLI}")
+
+
+# ------------------------------------------------------------
+# Detect Palette environment (Linux containers only)
+# ------------------------------------------------------------
+
+IS_PALETTE = False
+SDK_VERSION = ""
+
+sdk_release = Path("/etc/sdk-release")
+if sdk_release.exists():
+    for line in sdk_release.read_text().splitlines():
+        s = line.strip()
+
+        # Match "SDK Version" line (case-insensitive)
+        if s.lower().startswith("sdk version"):
+            IS_PALETTE = True
+            SDK_VERSION = "unknown"
+
+            # Preferred format: "SDK Version = <value>"
+            if "=" in s:
+                _, rhs = s.split("=", 1)
+                SDK_VERSION = rhs.strip()
+
+            # Alternate format: "SDK Version: <value>"
+            elif ":" in s:
+                _, rhs = s.split(":", 1)
+                SDK_VERSION = rhs.strip()
+
+            # Fallback: "SDK Version <value>"
+            else:
+                parts = s.split(None, 2) 
+                if len(parts) >= 3:
+                    SDK_VERSION = parts[2].strip()
+
+            if not SDK_VERSION:
+                SDK_VERSION = "unknown"
+
+            info(f"Detected Palette environment (SDK Version: {SDK_VERSION})")
+            break
+
+
+# ------------------------------------------------------------
+# Palette container install logic
+# ------------------------------------------------------------
+
+def add_path_to_bash_profile(path: str) -> None:
+    """
+    Add a directory to PATH via ~/.bash_profile in an idempotent way.
+    Also updates PATH for the current process.
+    """
+    path = str(Path(path).expanduser().resolve())
+
+    # 1️⃣ Update current process PATH
+    current_path = os.environ.get("PATH", "")
+    if path not in current_path.split(os.pathsep):
+        os.environ["PATH"] = f"{path}{os.pathsep}{current_path}"
+
+    # 2️⃣ Persist to ~/.bash_profile
+    home = Path.home()
+    profile = home / ".bash_profile"
+
+    export_line = f'export PATH="$PATH:{path}"'
+
+    # Ensure file exists
+    if not profile.exists():
+        profile.write_text(export_line + "\n")
+        return
+
+    content = profile.read_text()
+
+    # Avoid duplicate entries
+    if export_line not in content:
+        profile.write_text(content.rstrip() + "\n" + export_line + "\n")
+
+
+def run(cmd: list[str]) -> None:
+    subprocess.run(cmd, check=True)
+
+
+def create_modelsdk_venv(venv_dir: Path) -> Path:
+    """Create (or reuse) Model SDK virtual environment."""
+    if not venv_dir.exists():
+        info(f"Creating Model SDK venv at {venv_dir}")
+        run([
+            sys.executable,
+            "-m",
+            "venv",
+            str(venv_dir),
+            "--system-site-packages",
+        ])
+    else:
+        info(f"Using existing Model SDK venv at {venv_dir}")
+
+    python_bin = venv_dir / "bin" / "python"
+    return python_bin
+
+
+def install_in_model_sdk(python_bin: Path) -> None:
+    """Install dependencies for Model SDK container."""
+    info("Installing Model SDK dependencies")
+
+    run([python_bin, "-m", "pip", "install", "-r", MODEL_REQ])
+    run([python_bin, "-m", "pip", "install", "ultralytics==8.3.145", "--no-deps"])
+    run([python_bin, "-m", "pip", "install", "."])
+
+
+def install_in_mpk_cli() -> None:
+    """Install dependencies for MPK CLI container."""
+    info("Installing MPK CLI dependencies")
+
+    run([sys.executable, "-m", "pip", "install", "-r", MPK_REQ])
+    run([sys.executable, "-m", "pip", "install", ".", "--force-reinstall"])
+
+
+def detect_palette_container() -> str:
+    hostname = os.uname().nodename.lower()
+    info(f"Detected container hostname: {hostname}")
+
+    if "modelsdk" in hostname:
+        return "modelsdk"
+    if "mpk" in hostname:
+        return "mpk"
+
+    die(
+        "Unable to determine Palette container type from hostname.\n"
+        f"Hostname: {hostname}"
+    )
+
+
+def palette_install() -> None:
+    info("Running inside Palette container")
+
+    container_type = detect_palette_container()
+
+    if container_type == "modelsdk":
+        python_bin = create_modelsdk_venv(MODEL_VENV_DIR)
+        install_in_model_sdk(python_bin)
+        venv_dir = MODEL_VENV_DIR.resolve()
+        venv_bin = venv_dir / "bin"
+        add_path_to_bash_profile(venv_bin)
+
+    elif container_type == "mpk":
+        install_in_mpk_cli()
+        add_path_to_bash_profile(Path.home() / ".local" / "bin")
+
+    info("Palette container installation completed successfully")
+    sys.exit(0)
+
+if IS_PALETTE:
+    info("Running inside Palette container.")
+    palette_install()
+
+
+# ------------------------------------------------------------
+# Host environment: validate SDK containers (Docker CLI)
+# ------------------------------------------------------------
+
+info("Running from host environment.")
+info("Validating SDK containers via Docker CLI.")
+
+# Check docker exists
+try:
+    subprocess.run(["docker", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+except Exception:
+    die("Docker is not installed or not on PATH.")
+
+# Get running container images
+try:
+    result = subprocess.run(
+        ["docker", "ps", "--format", "{{.Image}}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+except subprocess.CalledProcessError as e:
+    die(f"Failed to query docker containers:\n{e.stderr}")
+
+images = result.stdout.lower().splitlines()
+
+has_model_sdk = any("modelsdk" in img for img in images)
+has_mpk = any("mpk" in img for img in images)
+has_runtime = any("elxr" in img or "yocto" in img for img in images)
+
+if not has_model_sdk:
+    die("Model SDK container not found")
+if not has_mpk:
+    die("MPK CLI container not found")
+if not has_runtime:
+    die("Neither eLxr nor Yocto runtime container found")
+
+info("Required SDK containers detected:")
+info("  - Model SDK: OK")
+info("  - MPK CLI: OK")
+info("  - Runtime: OK")
+
+
+# ------------------------------------------------------------
+# Install tool into SDK containers
+# ------------------------------------------------------------
+
+info("Installing tool-model-to-pipeline into SDK containers")
+
+# Running `version` command ensures that sima-cli is updated automatically
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "model",
+        "sima-cli",
+        "version"
+    ],
+    check=True,
+)
+
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "model",
+        "sima-cli",
+        "install",
+        "gh:sima-ai/tool-model-to-pipeline",
+    ],
+    check=True,
+)
+
+# Running `version` command ensures that sima-cli is updated automatically
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "mpk",
+        "sima-cli",
+        "version"
+    ],
+    check=True,
+)
+
+subprocess.run(
+    [
+        SIMA_CLI,
+        "sdk",
+        "mpk",
+        "sima-cli",
+        "install",
+        "gh:sima-ai/tool-model-to-pipeline",
+    ],
+    check=True,
+)
+
+
+# ------------------------------------------------------------
+# Install monitor app on host
+# ------------------------------------------------------------
+
+info("Installing Python dependencies into local virtual environment")
+
+# ------------------------------------------------------------
+# Create venv in current directory
+# ------------------------------------------------------------
+
+venv_dir = Path.cwd() / ".venv"
+subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+
+# ------------------------------------------------------------
+# Resolve pip inside venv
+# ------------------------------------------------------------
+
+pip_bin = venv_dir / (
+    "Scripts/pip.exe" if platform.system() == "Windows" else "bin/pip"
+)
+
+if not pip_bin.exists():
+    die(f"pip not found in virtual environment: {pip_bin}")
+
+# ------------------------------------------------------------
+# Install requirements.txt from current directory
+# ------------------------------------------------------------
+
+subprocess.run(
+    [str(pip_bin), "install", "-r", "requirements.txt"],
+    check=True,
+)
+
+info("Installation completed successfully into host environment")
+print()
+print("Supported YOLO models:")
+print("- yolov8n, yolov8m, yolov8l")
+print("- yolov9t, yolov9s, yolov9m, yolov9c")
+print("- yolov10n, yolov10s, yolov10m, yolov10b, yolov10x")
+print("- yolo11n, yolo11s, yolo11m, yolo11l")
+print()
+print("Run pipeline creation (example):")
+print("cd tool-model-to-pipeline")
+print("python3 model-to-pipeline/run.py samples/yolov9c/run-yaml.sima")
+print()

@@ -1,9 +1,7 @@
 loguru==0.7.3
-ultralytics==8.3.145
 typer==0.16.0
 rich
 paramiko
 scp
-pydantic
-onnxscript
-numpy==1.23.5
+pydantic==2.12.5
+pydantic-core==2.41.5

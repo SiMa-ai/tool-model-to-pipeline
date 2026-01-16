@@ -21,35 +21,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import tempfile
+import time
+import json
 
-import argparse
-from model_to_pipeline.steps.steps_base import StepBase
-from model_to_pipeline.utils.loader import get_compiler
+STATE_FILE = os.environ.get(
+    "MODEL_TO_PIPELINE_STATE_FILE",
+    "/home/docker/sima-cli/tool-model-to-pipeline/.model-to-pipeline-state.json",
+)
 
-
-class StepCompile(StepBase):
-    """Step for performing Compile on the model.
-
-    This step is responsible for modifying the model as per the requirements.
-    It uses a compiler plugin to perform the Compile operation.
+def write_state(update: dict[str, str]) -> None:
     """
+    Atomically update the shared state file.
+    """
+    state = {}
 
-    name = "compile"
-    sequence = 4
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+        except Exception:
+            state = {}
 
-    def run(self, args: argparse.Namespace) -> bool:
-        """Run the Compile step.
+    state.update(update)
+    state["ts"] = int(time.time())
 
-        Args:
-            args: Arguments passed to the step.
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
 
-        Returns:
-            bool: True if the Compile was successful, False otherwise.
-        """
-        compiler = get_compiler(args.compiler if args.compiler else args.model_name)
-        if compiler:
-            instance = compiler()
-            result = instance.run(args)
-            return result
-        else:
-            raise ValueError(f"Plugin Compile for {args.model_name} not found.")
+    # Atomic write: tmp → replace
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, dir=os.path.dirname(STATE_FILE)
+    ) as tmp:
+        json.dump(state, tmp)
+        tmp.flush()
+        os.fsync(tmp.fileno())
+
+    os.replace(tmp.name, STATE_FILE)
