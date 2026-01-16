@@ -435,7 +435,7 @@ if __name__ == "__main__":
         load_state_file()
 
     # Start watchdog
-    # reset_state_file()
+    reset_state_file()
     observer = start_state_watcher()
 
     try:
