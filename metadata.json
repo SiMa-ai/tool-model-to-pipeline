@@ -13,7 +13,7 @@
         }
     ],
     "resources": [
-        "gh:sima-ai/tool-model-to-pipeline@2.0_prep"
+        "gh:sima-ai/tool-model-to-pipeline"
     ],
     "selectable-resources":
     [
