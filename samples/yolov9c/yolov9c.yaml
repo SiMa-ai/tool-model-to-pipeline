@@ -5,13 +5,13 @@ pipeline_name: YoloV9c
 
 model_params:
   # Path to the ONNX file. (If missing and it's a YOLO model, it will be auto-downloaded from Ultralytics)
-  model_path: yolov9c.onnx
+  model_path: /home/docker/sima-cli/yolov9c.onnx
 
   # Base model name without the version suffix (e.g., n, s, m, c, l, x)
   model_name: yolov9
 
   # Optional: Path to the post-surgery model file. If empty, generated dynamically.
-  post_surgery_model_path:
+  post_surgery_model_path:  /home/docker/sima-cli/yolov9c_post_surgery.onnx
 
   # Model category (currently not used). Options: object-detection, image-classification, segmentation
   model_type: object-detection

@@ -42,6 +42,7 @@ class SurgeonYoloV8(SurgeonBase):
         model_name = os.path.splitext(os.path.basename(args.model_path))[0]
 
         onnx_model = args.model_path
+    
         # Extract the model parameters
         # Load the ONNX model
         model = oh.load_model(onnx_model)
@@ -80,8 +81,6 @@ class SurgeonYoloV8(SurgeonBase):
 
         # automate the number of classes and input size
         H, W = imgz_size
-
-        model = oh.load_model(f"{model_name}.onnx")
 
         # Remove all outputs and reconstruct outputs.
         oh.remove_output(model)
