@@ -29,6 +29,14 @@ host-pc$ cd ~/workspace/tool-model-to-pipeline
 host-pc$ python3 model-to-pipeline/run.py samples/yolov9c/yolov9c.yaml -p 5001
 ```
 
+See the following screenshots for reference.
+
+![monitor](monitor.jpg)
+
+Once model compilation step is completed, user can view the operator cycle stats in the following view.
+
+![model-stats](model-stats.jpg)
+
 ## Run individual stages
 
 Alternatively, the developer can run individual stages by going directly into the respective SDK container.

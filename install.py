@@ -305,7 +305,7 @@ subprocess.run(
         "model",
         "sima-cli",
         "install",
-        "gh:sima-ai/tool-model-to-pipeline@2.0_prep",
+        "gh:sima-ai/tool-model-to-pipeline",
     ],
     check=True,
 )
@@ -329,7 +329,7 @@ subprocess.run(
         "mpk",
         "sima-cli",
         "install",
-        "gh:sima-ai/tool-model-to-pipeline@2.0_prep",
+        "gh:sima-ai/tool-model-to-pipeline",
     ],
     check=True,
 )
