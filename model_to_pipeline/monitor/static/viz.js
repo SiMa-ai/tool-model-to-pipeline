@@ -6,16 +6,40 @@ let currentView = "timeline";
 let currentSearch = "";
 let durationThreshold = 0;
 
-window.addEventListener("DOMContentLoaded", loadData);
 
-async function loadData() {
-  const res = await fetch("/data");
+async function loadModelStatsIfReady() {
+  if (!statsAvailable) {
+    showStatsNotReady();
+    return;
+  }
+
+  if (statsLoaded) {
+    ensureStatsChart();
+    return;
+  }
+
+  let res;
+  try {
+    res = await fetch("/model_stats");
+  } catch (e) {
+    console.warn("Failed to fetch /model_stats:", e);
+    showStatsNotReady();
+    return;
+  }
+
+  if (!res.ok) {
+    showStatsNotReady();
+    return;
+  }
+
   ops = await res.json();
-  renderTable();
+  statsLoaded = true;
 
-  // Do NOT init or draw the chart here, because stats tab might be hidden.
-  // We'll init only when the stats tab is made visible.
+  showStatsReady();
+  renderTable();
+  ensureStatsChart();
 }
+
 
 /* Tab switching */
 window.addEventListener("DOMContentLoaded", () => {
@@ -34,14 +58,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (activeContent === statsTab) {
       ensureStatsChart();
     }
-  }
-
-  tabConfigBtn.addEventListener("click", () => activateTab(tabConfigBtn, configTab));
-  tabStatsBtn.addEventListener("click",  () => activateTab(tabStatsBtn,  statsTab));
-
-  // If your page loads with STATS visible by default, call this once:
-  if (statsTab.classList.contains("active")) {
-    ensureStatsChart();
   }
 });
 
@@ -561,4 +577,15 @@ function getBarColor(name) {
   return name.toLowerCase().includes(currentSearch)
     ? "#f39c12" // match highlight
     : "#d3d3d3"; // faded non-match
+}
+
+
+function showStatsNotReady() {
+  document.getElementById("stats-placeholder").style.display = "block";
+  document.getElementById("stats-content").style.display = "none";
+}
+
+function showStatsReady() {
+  document.getElementById("stats-placeholder").style.display = "none";
+  document.getElementById("stats-content").style.display = "block";
 }

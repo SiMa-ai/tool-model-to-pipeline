@@ -220,3 +220,54 @@ table {
 .main-content {
   flex: 1;
 }
+
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  background-color: #3498db;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn:hover {
+  background-color: #2c80b4;
+}
+
+#searchBox {
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#threshold-slider {
+  width: 200px;
+  vertical-align: middle;
+}
+
+#threshold-label {
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+#viewSelector {
+  margin-left: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+#viewSelector:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 4px rgba(52,152,219,0.5);
+}

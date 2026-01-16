@@ -26,6 +26,8 @@
 let currentStream = null;
 let logBuffer = [];
 let flushTimer = null;
+let statsLoaded = false;
+let statsAvailable = false;
 
 /* --------------------------------------------------------------------------
    Frontend Script for Model-to-Pipeline Monitor
@@ -161,6 +163,12 @@ function updateStepStates() {
     .then(states => {
       window.currentStates = states;
 
+      if (states.compile === "success") {
+        if (statsAvailable == false) {
+          statsAvailable = true;
+          loadModelStatsIfReady();
+        }
+      }
       // Reset all steps
       document.querySelectorAll(".step").forEach(step => {
         step.classList.remove("in-progress", "success", "fail", "disabled");

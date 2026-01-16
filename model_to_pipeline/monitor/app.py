@@ -23,7 +23,7 @@
 #
 # Copyright (c) 2026 SiMa.ai
 
-from flask import Flask, render_template, request, abort, Response, stream_with_context
+from flask import Flask, render_template, request, abort, Response, stream_with_context, jsonify
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import os, re, glob, json, time, socket, logging
@@ -33,6 +33,7 @@ import argparse
 import tarfile
 import tempfile
 import subprocess
+import yaml
 
 # -------------------------
 # Paths & Config
@@ -351,6 +352,48 @@ def stream_log(prefix):
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
+def find_file_recursive(base_dir, name_substring):
+    """
+    Recursively find the first file containing the substring in its name (case-insensitive).
+    Example: find_file_recursive('/tmp/foo', 'mla_stats.yaml')
+    """
+    lower_sub = name_substring.lower()
+    for root, _, files in os.walk(base_dir):
+        for fname in files:
+            if lower_sub in fname.lower():
+                return os.path.join(root, fname)
+    return None
+
+
+def load_ops_from_file(extract_dir):
+    """Find and parse *any* mla_stats.yaml file inside the extracted directory."""
+    stats_path = find_file_recursive(extract_dir, "mla_stats.yaml")
+    if not stats_path:
+        print(f"⚠️ No file matching '*mla_stats.yaml' found in {extract_dir}")
+        return []
+
+    print(f"📄 Found MLA stats file: {stats_path}")
+    with open(stats_path, "r") as f:
+        try:
+            data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            print(f"❌ YAML parse error in {stats_path}: {e}")
+            return []
+
+    ops = []
+    for idx, item in data.items():
+        try:
+            duration = item["end_cycle"] - item["start_cycle"]
+            ops.append({
+                "idx": int(idx),
+                "name": item["name"],
+                "start_cycle": item["start_cycle"],
+                "end_cycle": item["end_cycle"],
+                "duration": duration,
+            })
+        except Exception as e:
+            print(f"⚠️ Skipped invalid entry {idx}: {e}")
+    return ops
 
 @app.route("/model_stats")
 def model_stats():
@@ -389,28 +432,8 @@ def model_stats():
     except Exception as e:
         abort(500, f"Failed to extract model archive: {e}")
 
-    # 4️⃣ Find *_mla_stats.yaml (partial match)
-    stats_file = None
-    for root, _, files in os.walk(extract_dir):
-        for name in files:
-            if "mla_stats.yaml" in name:
-                stats_file = os.path.join(root, name)
-                break
-        if stats_file:
-            break
-
-    if not stats_file:
-        abort(404, "mla_stats.yaml not found in model archive")
-
-    # 5️⃣ Return file content
-    try:
-        with open(stats_file, "r") as f:
-            content = f.read()
-    except Exception as e:
-        abort(500, f"Failed to read stats file: {e}")
-
-    return Response(content, mimetype="text/yaml")
-
+    ops = load_ops_from_file(extract_dir)
+    return jsonify(ops)
 
 # -------------------------
 # Main
@@ -436,7 +459,7 @@ if __name__ == "__main__":
         load_state_file()
 
     # Start watchdog
-    reset_state_file()
+    # reset_state_file()
     observer = start_state_watcher()
 
     try:
