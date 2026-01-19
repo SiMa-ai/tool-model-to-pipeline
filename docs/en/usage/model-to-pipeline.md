@@ -45,7 +45,7 @@ First, start the monitor session and open http://host:5000 in the browser.
 
 ```sh
 host-pc$ cd ~/workspace/tool-model-to-pipeline && source .venv/bin/activate
-host-pc$ python3 model-to-pipeline/monitor/app.py
+host-pc$ python3 model_to_pipeline/monitor/app.py
 ```
 
 **Running quantization and compilation stage**
