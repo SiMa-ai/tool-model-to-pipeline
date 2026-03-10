@@ -47,8 +47,7 @@ def get_model_info(mpk_package):
 
     # Extract contents
     os.system("cd /tmp/sima_tmp/; unzip /tmp/sima_tmp/project.mpk")
-    os.system("cd /tmp/sima_tmp/*/resources/; rpm2cpio installer.rpm | cpio -idmv")
-    os.system("cp /tmp/sima_tmp/*/resources/data/simaai/applications/*/etc/* /tmp/sima_tmp/")
+    os.system("cp /tmp/sima_tmp/*/etc/* /tmp/sima_tmp/")
 
     # Read JSON file
     with open("/tmp/sima_tmp/mpk.json") as f:
