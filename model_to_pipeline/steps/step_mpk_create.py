@@ -47,12 +47,14 @@ class StepMpkCreate(StepBase):
         if '_simaaisrc' not in args.pipeline_name:
             args.pipeline_name = args.pipeline_name + '_simaaisrc'
 
-        command = f"mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {args.device_type if args.device_type != 'both' else 'davinci'}"
+        board_type = args.device_type
+        build_target = 'yocto' if board_type == 'davinci' else 'elxr'
+        command = f"mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {board_type} --build-target {build_target}"
         logging.info(f"Executing command to create pipeline: {command}")
         logging.info(f"Python PATH: {os.environ['PATH']}")
 
 
-        command = f"unset LD_LIBRARY_PATH && mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {args.device_type if args.device_type != 'both' else 'davinci'}"
+        command = f"unset LD_LIBRARY_PATH && mpk create -s {os.getcwd()}/{args.pipeline_name} -d {os.getcwd()}/{args.pipeline_name} --clean --board-type {board_type} --build-target {build_target}"
 
         source_path = os.path.abspath(os.path.join(os.getcwd(), args.pipeline_name))
         print("Source path exists:", os.path.exists(source_path))
@@ -65,7 +67,7 @@ class StepMpkCreate(StepBase):
         env = original_env.copy()
         env.pop("LD_LIBRARY_PATH", None)
 
-        command = f"unset LD_LIBRARY_PATH && mpk create -s ./ -d ./ --clean --board-type {args.device_type}" #  if args.device_type != 'both' else 'davinci'}"
+        command = f"unset LD_LIBRARY_PATH && mpk create -s ./ -d ./ --clean --board-type {board_type} --build-target {build_target}"
         logging.info(f"Executing command to create pipeline: {command}")
         op = subprocess.run(command, shell=True, \
                             executable="/bin/bash", \
@@ -76,7 +78,7 @@ class StepMpkCreate(StepBase):
         logging.info(op.stdout)
         logging.error(op.stderr)
 
-        command = f"mpk create -s ./ -d ./ --board-type {args.device_type}" # if args.device_type != 'both' else 'davinci'}"
+        command = f"mpk create -s ./ -d ./ --board-type {board_type} --build-target {build_target}"
         logging.info(f"Executing command to create pipeline: {command}")
         op = subprocess.run(command, shell=True, \
                             executable="/bin/bash", \
