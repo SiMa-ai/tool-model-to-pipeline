@@ -1,17 +1,19 @@
 # Name for the generated pipeline (user-defined)
 pipeline_name: YoloV9c
 
-# ---- Model configuration ----
+# Project Path (inside SDK container). In this path You can find the compiled tar.gz file and pipeline project
+project_path: /home/docker/sima-cli/yolov9c-project
 
+# ---- Model configuration ----
 model_params:
   # Path to the ONNX file. (If missing and it's a YOLO model, it will be auto-downloaded from Ultralytics)
-  model_path: /home/docker/sima-cli/yolov9c.onnx
+  model_path: /home/docker/sima-cli/yolov9c-project/yolov9c.onnx
 
   # Base model name without the version suffix (e.g., n, s, m, c, l, x)
   model_name: yolov9
 
   # Optional: Path to the post-surgery model file. If empty, generated dynamically.
-  post_surgery_model_path:  /home/docker/sima-cli/yolov9c_post_surgery.onnx
+  post_surgery_model_path:  /home/docker/sima-cli/yolov9c-project/yolov9c_post_surgery.onnx
 
   # Model category (currently not used). Options: object-detection, image-classification, segmentation
   model_type: object-detection
@@ -61,7 +63,7 @@ compilation_params:
   # ---- Calibration settings (used during quantization) ----
   calibration_params:
     # Path (inside SDK container) to calibration dataset
-    calibration_data_path: /home/docker/sima-cli/calibration_images
+    calibration_data_path: /home/docker/sima-cli/yolov9c-project/calibration_images
 
     # File extension of calibration images (`jpg`, `jpeg`, `png`, `webp`; mixed not supported)
     calibration_ds_extn: jpg

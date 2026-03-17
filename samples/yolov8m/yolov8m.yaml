@@ -1,17 +1,19 @@
 # Name for the generated pipeline (user-defined)
 pipeline_name: yolov8m
 
-# ---- Model configuration ----
+# Project Path (inside SDK container). In this path You can find the compiled tar.gz file and pipeline project
+project_path: /home/docker/sima-cli/yolov8m-project
 
+# ---- Model configuration ----
 model_params:
-  # Path to the ONNX file. (If missing and it's a YOLO model, it will be auto-downloaded from Ultralytics)
-  model_path: /home/docker/sima-cli/yolov8m.onnx
+  # Path to the ONNX file. If it is missing in project_path and the model is a YOLO model, it will be automatically downloaded from Ultralytics.
+  model_path: /home/docker/sima-cli/yolov8m-project/yolov8m.onnx
 
   # Base model name without the version suffix (e.g., n, s, m, c, l, x)
   model_name: yolov8
 
   # Optional: Path to the post-surgery model file. If empty, generated dynamically.
-  post_surgery_model_path: /home/docker/sima-cli/yolov8m-post-surgery.onnx
+  post_surgery_model_path: /home/docker/sima-cli/yolov8m-project/yolov8m-post-surgery.onnx
 
   # Model category (currently not used). Options: object-detection, image-classification, segmentation
   model_type: object-detection
@@ -46,7 +48,7 @@ extras:
 # ---- Compilation parameters ----
 
 compilation_params:
-  # Directory to save compilation results
+  # Directory to save compilation results inside project_path
   compilation_result_dir: result
 
   # Compiler to use (e.g., yolo, resnet, etc.)
@@ -60,8 +62,8 @@ compilation_params:
 
   # ---- Calibration settings (used during quantization) ----
   calibration_params:
-    # Path (inside SDK container) to calibration dataset
-    calibration_data_path: /home/docker/sima-cli/calibration_images
+    # Path  to calibration dataset inside project_path. If it empty it will download automatically coco calibration dataset.
+    calibration_data_path: /home/docker/sima-cli/yolov8m-project/calibration_images
 
     # File extension of calibration images (`jpg`, `jpeg`, `png`, `webp`; mixed not supported)
     calibration_ds_extn: jpg

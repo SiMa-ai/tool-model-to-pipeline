@@ -66,14 +66,15 @@ class PipelineCreate(PipelineBase):
         davinci_model, modalix_model = self.get_compiled_models(args=args)
         # See if davinci path is availble, else use modalix. If both availble, use davinci
         model_path = davinci_model or modalix_model
+        pipeline_name = model_path.split("/")[-1].split(".")[0]
+        pipeline_dir = pipeline_name + '_simaaisrc'
+        if os.path.isdir(pipeline_dir):
+            shutil.rmtree(pipeline_dir)
+            logging.info(f"Delete the older existing pipeline {pipeline_dir}")
         logging.info(f"Creating a pipeline with {model_path}")
         command = f"mpk project create --model-path {model_path} --input-resource {input_resource}"
         logging.info(f"Executing command to create pipeline: {command}")
         op, ec = execute_command(command=command)
-
-        pipeline_name = model_path.split("/")[-1].split(".")[0] 
-
-        pipeline_dir = pipeline_name + '_simaaisrc'
         print('created pipeline_dir:', pipeline_dir)
 
         # if os.path.exists(pipeline_name):

@@ -107,7 +107,7 @@ STATE_FILE = os.path.join(WORKSPACE_DIR, "tool-model-to-pipeline", ".model-to-pi
 STATE_DIR = os.path.dirname(STATE_FILE) or "."
 
 TOOL_DIR = os.path.join(WORKSPACE_DIR, 'tool-model-to-pipeline')
-LOG_DIR = os.path.join(TOOL_DIR, 'logs')
+LOG_DIR = None
 
 # -------------------------
 # Flask App
@@ -214,6 +214,8 @@ def parse_yaml_as_sections(filepath):
     return sections
 
 def find_latest_log(prefix: str):
+    if not LOG_DIR:
+        return None
     pattern = os.path.join(LOG_DIR, f"{prefix}_*.log")
     matches = glob.glob(pattern)
     return max(matches, key=os.path.getmtime) if matches else None
@@ -447,12 +449,32 @@ def parse_args():
         default=5000,
         help="Port to run the monitor server on (default: 5000)"
     )
+    parser.add_argument(
+        "--log_dir",
+        type=str,
+        default=None,
+        help="Path to logs directory (overrides default TOOL_DIR/logs)"
+    )
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
 
     logging.basicConfig(level=logging.INFO)
+
+    if args.log_dir:
+        log_dir = args.log_dir
+        # Translate container-internal path to host path when needed
+        container_base = "/home/docker/sima-cli"
+        if log_dir.startswith(container_base):
+            log_dir = WORKSPACE_DIR + log_dir[len(container_base):]
+        LOG_DIR = os.path.abspath(log_dir)
+        print(f"🚀 Using custom log directory: {LOG_DIR}")
+    else:
+        LOG_DIR = os.path.join(TOOL_DIR, 'logs')
+        print(f"🚀 Using default log directory: {LOG_DIR}")
+
+    logging.info(f"[config] Using LOG_DIR: {LOG_DIR}")
 
     # Load initial state if file exists
     if os.path.exists(STATE_FILE):

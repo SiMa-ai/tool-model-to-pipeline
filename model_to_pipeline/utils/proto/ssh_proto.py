@@ -30,8 +30,8 @@ class SSH:
     def __init__(
         self,
         host: str,
-        username: str = "root",
-        password: str = "commitanddeliver",
+        username: str = "sima",
+        password: str = "edgeai",
         port: int = 22,
     ):
         self.host = host

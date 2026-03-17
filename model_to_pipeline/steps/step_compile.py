@@ -23,6 +23,9 @@
 
 
 import argparse
+import logging
+import os
+import shutil
 from model_to_pipeline.steps.steps_base import StepBase
 from model_to_pipeline.utils.loader import get_compiler
 
@@ -48,6 +51,9 @@ class StepCompile(StepBase):
         """
         compiler = get_compiler(args.compiler if args.compiler else args.model_name)
         if compiler:
+            if os.path.exists(args.compilation_result_dir):
+                logging.info(f"Clearing existing compilation directory: {args.compilation_result_dir}")
+                shutil.rmtree(args.compilation_result_dir)
             instance = compiler()
             result = instance.run(args)
             return result
