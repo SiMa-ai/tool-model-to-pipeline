@@ -51,35 +51,25 @@ class StepDownloadModel(StepBase):
         Returns:
             bool: True if the Download Calibration dataset was successful, False otherwise.
         """
-        logging.info(f"Checking if Calibration {args.calibration_data_path} is available or not.")
+        if args.calibration_data_path is None:
+            calib_dir = "/home/docker/sima-cli/calibration_images"
+            args.calibration_data_path = calib_dir
+            logging.info(f"Calibration data path not provided, using default: {calib_dir}")
+
+        logging.info(f"Checking if Calibration data is available at {args.calibration_data_path}.")
 
         calib_images_available = os.path.exists(args.calibration_data_path) and len(os.listdir(args.calibration_data_path)) > 0
 
-        if not calib_images_available: #args.calibration_data_path is None or not os.path.exists(args.calibration_data_path):
-            logging.info(f"Calibration found {args.calibration_data_path}. Downloading...")
-            logging.info(f"Checking for Calibration dataset in local.. ")
+        if not calib_images_available:
+            logging.info(f"Calibration data not found at {args.calibration_data_path}. Downloading...")
 
             try:
                 base_url = "http://images.cocodataset.org/val2017/"
                 img_urls = [f"{base_url}{img_id}.jpg" for img_id in imgIds]
-                print('img_urls:', img_urls)
 
-                # Create output directory
-                output_dir = "/home/docker/sima-cli"
-                calib_dir = os.path.join(output_dir, 'calibration_images')
-                args.calibration_data_path = calib_dir
-
-                if os.path.exists(calib_dir):
-                    if len(os.listdir(calib_dir)) > 0:
-                        logging.info(f"Found {len(os.listdir(calib_dir))} images in calibration directory")
-                        logging.info(f"✅ Calibration images directory already exists at {calib_dir}")
-                        logging.info(f"COCO calibration {args.calibration_data_path} already exists... Skipping downloading")
-                        return True
-                    else:
-                        os.rmdir(calib_dir)
-                        logging.warning("Calibration directory exists but is empty. Will re-download images.")
-
+                calib_dir = args.calibration_data_path
                 os.makedirs(calib_dir, exist_ok=True)
+
                 # Download images
                 for id, url in enumerate(img_urls):
                     img_data = requests.get(url).content
@@ -87,13 +77,12 @@ class StepDownloadModel(StepBase):
                     with open(img_filename, 'wb') as f:
                         f.write(img_data)
                 logging.info(f"✅ Calibration images downloaded successfully to {calib_dir}")
-                write_state({'calibration_data_path': calib_dir})
 
             except Exception as e:
                 logging.error(f"Failed to download calibration dataset: {e}. \n Provide the local path to the calibration dataset using --calibration-data-path")
-
                 return False
+        else:
+            logging.info(f"Calibration data at {args.calibration_data_path} already exists... Skipping downloading")
 
-        logging.info(f"Calibration {args.calibration_data_path} already exists... Skipping downloading")
         write_state({'calibration_data_path': args.calibration_data_path})
         return True

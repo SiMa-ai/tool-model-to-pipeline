@@ -34,6 +34,7 @@ import psutil
 import argparse
 import webbrowser
 import socket
+import yaml
 
 # ------------------------------------------------------------
 # Config
@@ -159,8 +160,8 @@ def stop_monitor():
         timeout=3,
     )
 
-
-def start_monitor(port=5000):
+def start_monitor(port=5000, log_dir=None):
+    print(f"log_dir: {log_dir}")
     pids = listening_pids(start_monitor)
     if pids:
         print(f"⚠️  Port {port} is already in use by:")
@@ -193,9 +194,13 @@ def start_monitor(port=5000):
 
     print("📡 Starting monitor server...")
 
+    cmd = [sys.executable, f"{MONITOR_DIR}/app.py", "--port", f"{port}"]
+    if log_dir is not None:
+        cmd += ["--log_dir", str(log_dir)]
+
     with LOG_FILE.open("ab") as log:
         proc = subprocess.Popen(
-            [sys.executable, f"{MONITOR_DIR}/app.py",  "--port", f"{port}"],
+            cmd,
             cwd='.',
             stdout=log,
             stderr=subprocess.STDOUT,
@@ -211,7 +216,7 @@ def start_monitor(port=5000):
 # Main
 # ------------------------------------------------------------
 
-def write_sima_file(yaml_arg: str) -> Path:
+def write_sima_file(yaml_arg: str, project_path: str) -> Path:
     """
     Create a .sima file in /tmp using the YAML path exactly as provided.
     """
@@ -221,14 +226,16 @@ def write_sima_file(yaml_arg: str) -> Path:
 
 model
 {{
-        cd /home/docker/sima-cli/tool-model-to-pipeline \\
-        && .model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml {yaml_arg}
+        mkdir -p {project_path} \\
+        && cd {project_path}    \\
+        && /home/docker/sima-cli/tool-model-to-pipeline/.model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg}
 }}
 
 mpk
 {{
-        cd /home/docker/sima-cli/tool-model-to-pipeline \\
-        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml {yaml_arg}
+        mkdir -p {project_path} \\
+        && cd {project_path}    \\
+        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg}
 }}
 
 echo "✅ All done!"
@@ -257,8 +264,15 @@ def main():
     args = parser.parse_args()
 
     yaml_arg = args.yaml
+
+    with open(yaml_arg, "r") as f:
+        yaml_contents = yaml.safe_load(f)
+        project_path = yaml_contents.get("project_path")
+        if not project_path:
+            project_path = os.getcwd()
+
     sima_cli = resolve_sima_cli()
-    sima_file = write_sima_file(yaml_arg)
+    sima_file = write_sima_file(yaml_arg, project_path)
 
     def cleanup(*_):
         stop_monitor()
@@ -267,7 +281,7 @@ def main():
     signal.signal(signal.SIGTERM, cleanup)
 
     print(f"🚀 Starting monitoring service on port {args.port}...")
-    start_monitor(port=args.port)
+    start_monitor(port=args.port, log_dir=os.path.join(str(project_path), "logs"))
 
     print("⚙️  Running workflow:")
     print(f"    {sima_cli} sdk run {sima_file}")
