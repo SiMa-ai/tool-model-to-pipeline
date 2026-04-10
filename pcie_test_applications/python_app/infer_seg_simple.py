@@ -34,7 +34,7 @@ def unload_model(devintf):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='test_simahostpy.py',
+        prog='test_simaaihostpy.py',
         description='Example python script to test connection, deployment of a pipeline, killing the pipeline and disconnection from the PCIe device.',
         epilog='')
 

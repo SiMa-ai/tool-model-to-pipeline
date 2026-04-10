@@ -27,11 +27,13 @@ import os
 import sys
 import subprocess
 import platform
+import shutil
 from pathlib import Path
 
-MODEL_VENV_DIR = Path(".model_venv")
-MODEL_REQ = "requirements_modelsdk.txt"
-MPK_REQ = "requirements_mpkcli.txt"
+_TOOL_DIR = Path(__file__).parent.resolve()
+MODEL_VENV_DIR = _TOOL_DIR / ".model_venv"
+MODEL_REQ = str(_TOOL_DIR / "requirements_modelsdk.txt")
+MPK_REQ = str(_TOOL_DIR / "requirements_mpkcli.txt")
 
 # ------------------------------------------------------------
 # Logging helpers
@@ -113,7 +115,7 @@ if sdk_release.exists():
 
             # Fallback: "SDK Version <value>"
             else:
-                parts = s.split(None, 2) 
+                parts = s.split(None, 2)
                 if len(parts) >= 3:
                     SDK_VERSION = parts[2].strip()
 
@@ -186,7 +188,7 @@ def install_in_model_sdk(python_bin: Path) -> None:
 
     run([python_bin, "-m", "pip", "install", "-r", MODEL_REQ])
     run([python_bin, "-m", "pip", "install", "ultralytics==8.3.145", "--no-deps"])
-    run([python_bin, "-m", "pip", "install", "."])
+    run([python_bin, "-m", "pip", "install", str(_TOOL_DIR)])
 
 
 def install_in_mpk_cli() -> None:
@@ -194,7 +196,7 @@ def install_in_mpk_cli() -> None:
     info("Installing MPK CLI dependencies")
 
     run([sys.executable, "-m", "pip", "install", "-r", MPK_REQ])
-    run([sys.executable, "-m", "pip", "install", ".", "--force-reinstall"])
+    run([sys.executable, "-m", "pip", "install", str(_TOOL_DIR), "--force-reinstall"])
 
 
 def detect_palette_container() -> str:
@@ -305,7 +307,7 @@ subprocess.run(
         "model",
         "sima-cli",
         "install",
-        "gh:sima-ai/tool-model-to-pipeline",
+        "gh:sima-ai/tool-model-to-pipeline@main",
     ],
     check=True,
 )
@@ -329,7 +331,7 @@ subprocess.run(
         "mpk",
         "sima-cli",
         "install",
-        "gh:sima-ai/tool-model-to-pipeline",
+        "gh:sima-ai/tool-model-to-pipeline@main",
     ],
     check=True,
 )

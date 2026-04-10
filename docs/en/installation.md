@@ -6,7 +6,7 @@ Before installing or running this tool, ensure that the following requirements a
 
 - SiMa.ai DevKit connected to the network  
 - A development PC running **Ubuntu 22.04**  
-- [Palette SDK](https://docs.sima.ai/pages/palette/main.html) 2.0 properly installed  
+- [Palette SDK](https://docs.sima.ai/pages/palette/main.html) 2.1 properly installed  
 - [Serial connection](https://docs.sima.ai/pages/overview/setup_standalone_mode/setup_serial.html) established prior to SDK usage for initial setup and debugging  
 
 ## Update `sima-cli`
@@ -32,10 +32,10 @@ Make sure you selected `Model SDK`, `MPK CLI` and `Elxr SDK` during the SDK inst
 ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
 ┃ SDK             ┃ Version                       ┃ Running ┃
 ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
-│ yocto           │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
-│ mpk_cli_toolset │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
-│ modelsdk        │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
-│ elxr            │ 2.0.0_Palette_SDK_master_B240 │   ✅    │
+│ yocto           │ 2.1.0_Palette_SDK_master_B279 │   ✅    │
+│ mpk_cli_toolset │ 2.1.0_Palette_SDK_master_B279 │   ✅    │
+│ modelsdk        │ 2.1.0_Palette_SDK_master_B279 │   ✅    │
+│ elxr            │ 2.1.0_Palette_SDK_master_B279 │   ✅    │
 └─────────────────┴───────────────────────────────┴─────────┘
 ```
 

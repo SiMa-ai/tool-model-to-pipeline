@@ -4,3 +4,4 @@ include run_sample_pipeline/configs/*
 
 recursive-include model_to_pipeline/monitor/templates *
 recursive-include model_to_pipeline/monitor/static *
+recursive-include model_to_pipeline/bf16_assets *

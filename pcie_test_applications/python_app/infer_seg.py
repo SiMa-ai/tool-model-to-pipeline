@@ -7,7 +7,7 @@ import json
 
 import cv2
 import numpy as np
-from simahostpy import *
+from simaaihostpy import *
 import struct
 
 import importlib
@@ -17,7 +17,7 @@ import random
 import math
 
 
-package = 'simahostpy'
+package = 'simaaihostpy'
 simaaihostpy_implementation = importlib.import_module(package)
 
 class BaseEnum():
@@ -101,6 +101,10 @@ class Constants:
                             ]
     color                 = (0, 255, 0)  # Green color for bounding boxes
     mask_color            = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for _ in range(num_classes)] 
+    qid                   = 0
+    seq_id                = 0
+    app_id                = 0
+    opcode                = SiMaOpcode.opData
 
 class intf:
     def __init__(self, dev_name, device_queue, device_timeout):
@@ -143,11 +147,6 @@ class intf:
                                                 queue_entries,
                                                 queue_depth)
         return self.dev_ptr
-
-    def prep_tens(self, in_shape_list, out_shape_list, meta_data):
-        self.host_helper.prepare_tensors(in_shape_list,
-                                         out_shape_list, 0)
-        self.host_helper.set_metadata(meta_data)
         
     def load_model(self, device,
                    in_shape_list, out_shape_list,
@@ -161,7 +160,7 @@ class intf:
             raise ValueError('Shapes of in and out tensors cannot be None')
 
         self.host_helper.prepare_tensors(in_shape_list,
-                                         out_shape_list,0)
+                                         out_shape_list,Constants.app_id, Constants.seq_id, Constants.opcode)
 
         self.host_helper.set_metadata(metadata)
         self.meta_data = metadata
@@ -170,6 +169,7 @@ class intf:
         
         if((model_hdl is not None) and (model_path is not None)):
             model_def = self.host_helper.set_model_definition(
+                Constants.qid,
                 model_hdl["in_tensors"],
                 model_hdl["out_tensors"],
                 model_hdl["in_batch_sz"],
@@ -188,6 +188,7 @@ class intf:
 
         if (model_hdl is not None):
             model_def = self.host_helper.set_model_definition(
+                Constants.qid,
                 model_hdl["in_tensors"],
                 model_hdl["out_tensors"],
                 model_hdl["in_batch_sz"],
@@ -929,7 +930,7 @@ def run(args, input_images_path, output_images_path, mpk_package="project.mpk"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='test_simahostpy.py',
+        prog='test_simaaihostpy.py',
         description='Example python script to test connection, deployment of a pipeline, killing the pipeline and disconnection from the PCIe device.',
         epilog='')
 

@@ -3,16 +3,9 @@
 
 ## Start the SDK Docker
 ```bash
-cd ~/workspace/sdk/sdk_1.7/1.7.0_Palette_SDK_master_B219/sima-cli/
-./start.py
+sima-cli sdk start
+sima-cli sdk [model|mpk]
 ```
-
-## Install the Python Package inside the SDK docker
-```bash
-cd /home/docker/sima-cli/sima_mpk_generator_with_CPP_sample
-pip3 install sima_model_to_pipeline-sdk-1.7.tar.gz
-```
-
 
 # Yolo Object-Detection 
 ## Detection models supported:

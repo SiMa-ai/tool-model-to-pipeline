@@ -9,7 +9,7 @@ from time import time, sleep
 import json
 import cv2
 import numpy as np
-from simahostpy import *
+from simaaihostpy import *
 import struct
 import importlib
 from typing import Union
@@ -99,7 +99,7 @@ def setup_logger(filepath, sys_log_level=logging.INFO, console_log_level=logging
 
 logger = setup_logger("pciehost.log")
 
-package = 'simahostpy'
+package = 'simaaihostpy'
 simaaihostpy_implementation = importlib.import_module(package)
 
 class BaseEnum():
@@ -149,6 +149,10 @@ class Constants:
     class_names           = None
     H, W                  = FRAME_WIDTH, FRAME_HEIGHT
     color                 = (0, 255, 0)  # Green color for bounding boxes
+    qid                   = 0
+    seq_id                = 0
+    app_id                = 0
+    opcode                = SiMaOpcode.opData
 
 class intf:
     def __init__(self, mpk_package):
@@ -244,7 +248,7 @@ class intf:
                 model_hdl['inputBatchSize'] = 1
                 model_hdl['inputShape'] = Constants.INPUT_SHAPE
                 model_hdl['outputShape'] = Constants.OUTPUT_SHAPE
-                model_hdl['qid'] = 0
+                model_hdl['qid'] = Constants.qid
 
                 model_hdl_org.update(model_hdl)
 
@@ -276,11 +280,6 @@ class intf:
                                                 queue_entries,
                                                 queue_depth)
         return self.dev_ptr
-
-    def prep_tens(self, in_shape_list, out_shape_list, meta_data):
-        self.host_helper.prepare_tensors(in_shape_list,
-                                         out_shape_list, 0)
-        self.host_helper.set_metadata(meta_data)
         
     def load_model(self, device,
                    in_shape_list, out_shape_list,
@@ -294,7 +293,7 @@ class intf:
             raise ValueError('Shapes of in and out tensors cannot be None')
 
         self.host_helper.prepare_tensors(in_shape_list,
-                                         out_shape_list,0)
+                                         out_shape_list,Constants.app_id, Constants.seq_id, Constants.opcode)
 
         self.host_helper.set_metadata(metadata)
         self.meta_data = metadata
@@ -303,6 +302,7 @@ class intf:
         
         if((model_hdl is not None) and (model_path is not None)):
             model_def = self.host_helper.set_model_definition(
+                Constants.qid,
                 model_hdl["in_tensors"],
                 model_hdl["out_tensors"],
                 model_hdl["in_batch_sz"],
@@ -321,6 +321,7 @@ class intf:
 
         if (model_hdl is not None):
             model_def = self.host_helper.set_model_definition(
+                Constants.qid,
                 model_hdl["in_tensors"],
                 model_hdl["out_tensors"],
                 model_hdl["in_batch_sz"],

@@ -1,0 +1,218 @@
+pluginName: simaaiboxdecode
+gstreamerPluginName: simaaiboxdecode
+inputs:
+- type: STATIC
+outputs:
+- type: STATIC
+fileParams:
+  decode_type:
+    view:
+      type: select
+    available:
+    - centernet
+    - detr
+    - effdet
+    - yolo
+    - yolov7
+    - yolov8
+    - yolov8-pose
+    - yolov8-seg
+    - yolov9
+    default: yolo
+  topk:
+    default: 24
+  num_classes:
+    default: 80
+  detection_threshold:
+    default: 0.3
+  nms_iou_threshold:
+    default: 0.1
+    optional: true
+  version:
+    default: 0.1
+  node_name:
+    view:
+      readableName: Node name
+    default: simaai_boxdecode
+  memory:
+    cpu:
+      default: 0
+    next_cpu:
+      view:
+        readableName: Next plugin CPU
+      default: 1
+  system:
+    out_buf_queue:
+      default: 1
+    debug:
+      view:
+        readableName: Enable more debug logs, 0 => disable, 1=> enable
+      default: 0
+    dump_data:
+      view:
+        readableName: Dump data
+      default: 0
+  batch_size:
+    view:
+      readableName: No:of input images
+    default: 1
+    optional: true
+  num_in_tensor:
+    default: 9
+  channel_of_interest:
+    default: 0
+    optional: true
+  dq_scale:
+    view:
+      dataType: number_array
+    default:
+    - 0.3985348208101054
+    - 1.8187226177474125
+    - 261.3747281027927
+    - 0.39812331778037563
+    - 0.4891400470655299
+    - 259.1820884804301
+    - 0.3975131921407652
+    - 0.39456547557733
+    - 257.17931223081666
+  dq_zp:
+    view:
+      dataType: number_array
+    default:
+    - -128
+    - -128
+    - -128
+    - -128
+    - -128
+    - -128
+    - -128
+    - -128
+    - -128
+  buffers:
+    input[0]:
+      name:
+        view:
+          readableName: Buffer name
+        default: simaai_boxdecode
+        optional: true
+      size:
+        rule:
+          name: predecessor_value
+          value:
+          - size
+          - size_1
+        default: 2419200
+    output:
+      size:
+        view:
+          readableName: Output size
+        default: 580
+  original_width:
+    default: 1280
+  original_height:
+    default: 720
+  model_width:
+    default: 640
+  model_height:
+    default: 640
+  input_width:
+    view:
+      readableName: Width of input image
+      dataType: number_array
+    default:
+    - 80
+    - 80
+    - 80
+    - 40
+    - 40
+    - 40
+    - 20
+    - 20
+    - 20
+  input_height:
+    view:
+      readableName: Height of input image
+      dataType: number_array
+    default:
+    - 80
+    - 80
+    - 80
+    - 40
+    - 40
+    - 40
+    - 20
+    - 20
+    - 20
+  input_depth:
+    view:
+      readableName: Input depth
+      dataType: number_array
+    default:
+    - 6
+    - 6
+    - 243
+    - 6
+    - 6
+    - 243
+    - 6
+    - 6
+    - 243
+  slice_width:
+    view:
+      dataType: number_array
+    default:
+    - 80
+    - 80
+    - 80
+    - 40
+    - 40
+    - 20
+    - 20
+    - 20
+    - 20
+  slice_height:
+    view:
+      dataType: number_array
+    default:
+    - 80
+    - 80
+    - 1
+    - 40
+    - 40
+    - 1
+    - 20
+    - 20
+    - 1
+  slice_depth:
+    view:
+      dataType: number_array
+    default:
+    - 6
+    - 6
+    - 243
+    - 6
+    - 6
+    - 243
+    - 6
+    - 6
+    - 243
+  data_type:
+    view:
+      readableName: Input data type
+      dataType: string_array
+    default:
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+    - INT8
+inlineParams:
+  sima-allocator-type:
+    default: 2
+meta:
+  processor: CVU
+  type: sima
