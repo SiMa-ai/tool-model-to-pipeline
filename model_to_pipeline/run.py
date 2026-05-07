@@ -280,14 +280,24 @@ def main():
     sima_cli = resolve_sima_cli()
     sima_file = write_sima_file(yaml_arg, project_path)
 
+    # The monitor server resolves log paths via the modelsdk container's bind
+    # mount, which Docker Desktop reports as a WSL-internal path that Windows
+    # Python cannot read. Skip it on Windows; the SDK output still streams to
+    # the terminal.
+    monitor_enabled = os.name != "nt"
+
     def cleanup(*_):
-        stop_monitor()
+        if monitor_enabled:
+            stop_monitor()
 
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    print(f"🚀 Starting monitoring service on port {args.port}...")
-    start_monitor(port=args.port, log_dir=os.path.join(str(project_path), "logs"))
+    if monitor_enabled:
+        print(f"🚀 Starting monitoring service on port {args.port}...")
+        start_monitor(port=args.port, log_dir=f"{project_path}/logs")
+    else:
+        print("ℹ️  Monitor server is disabled on Windows; tool output will appear in this terminal.")
 
     print("⚙️  Running workflow:")
     print(f"    {sima_cli} sdk run {sima_file}")
