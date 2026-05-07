@@ -28,6 +28,7 @@ import sys
 import subprocess
 import signal
 import shutil
+import tempfile
 from pathlib import Path
 from typing import List
 import psutil
@@ -43,7 +44,7 @@ import yaml
 MONITOR_DIR = Path("model_to_pipeline/monitor").resolve()
 PORT = 5000
 
-TMP_DIR = Path(os.getenv("TEMP", "/tmp"))
+TMP_DIR = Path(tempfile.gettempdir())
 PID_FILE = TMP_DIR / "model_to_pipeline_monitor.pid"
 LOG_FILE = TMP_DIR / "model_to_pipeline_monitor.log"
 
@@ -162,7 +163,7 @@ def stop_monitor():
 
 def start_monitor(port=5000, log_dir=None):
     print(f"log_dir: {log_dir}")
-    pids = listening_pids(start_monitor)
+    pids = listening_pids(port)
     if pids:
         print(f"⚠️  Port {port} is already in use by:")
         for pid in pids:
@@ -194,7 +195,7 @@ def start_monitor(port=5000, log_dir=None):
 
     print("📡 Starting monitor server...")
 
-    cmd = [sys.executable, f"{MONITOR_DIR}/app.py", "--port", f"{port}"]
+    cmd = [sys.executable, str(MONITOR_DIR / "app.py"), "--port", f"{port}"]
     if log_dir is not None:
         cmd += ["--log_dir", str(log_dir)]
 
@@ -218,30 +219,35 @@ def start_monitor(port=5000, log_dir=None):
 
 def write_sima_file(yaml_arg: str, project_path: str) -> Path:
     """
-    Create a .sima file in /tmp using the YAML path exactly as provided.
+    Create a .sima file in the system temp dir using the YAML path exactly as provided.
     """
-    sima_path = Path("/tmp") / f"{Path(yaml_arg).stem}.sima"
+    sima_path = TMP_DIR / f"{Path(yaml_arg).stem}.sima"
+
+    # The .sima script is executed inside a Linux container by sima-cli, so all
+    # embedded paths must use POSIX separators regardless of the host OS.
+    yaml_arg_posix = Path(yaml_arg).as_posix()
+    project_path_posix = Path(project_path).as_posix()
 
     sima_contents = f"""# auto-generated.sima
 
 model
 {{
-        mkdir -p {project_path} \\
-        && cd {project_path}    \\
-        && /home/docker/sima-cli/tool-model-to-pipeline/.model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg}
+        mkdir -p {project_path_posix} \\
+        && cd {project_path_posix}    \\
+        && /home/docker/sima-cli/tool-model-to-pipeline/.model_venv/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg_posix}
 }}
 
 mpk
 {{
-        mkdir -p {project_path} \\
-        && cd {project_path}    \\
-        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg}
+        mkdir -p {project_path_posix} \\
+        && cd {project_path_posix}    \\
+        && ~/.local/bin/sima-model-to-pipeline model-to-pipeline --config-yaml /home/docker/sima-cli/tool-model-to-pipeline/{yaml_arg_posix}
 }}
 
 echo "✅ All done!"
 """
 
-    sima_path.write_text(sima_contents)
+    sima_path.write_text(sima_contents, encoding="utf-8")
     return sima_path
 
 
