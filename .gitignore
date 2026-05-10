@@ -2,3 +2,5 @@ dist/*
 .venv/*
 build/*
 *.egg-info/*
+config.json
+.claude/
