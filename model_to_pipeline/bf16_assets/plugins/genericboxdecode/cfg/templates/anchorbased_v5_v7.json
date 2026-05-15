@@ -1,0 +1,53 @@
+{
+    "_template": "YOLOv5 / YOLOv7 anchor-based detection (3 tensors).",
+    "_when_to_use": "Use this for stock yolov5 / yolov7 detection exports. Each tensor channel-packs num_anchors copies of (5 + num_classes) values per cell: [tx ty tw th obj cls0..clsC-1] x na. The plugin applies sigmoid + anchor formula internally.",
+    "_change_per_model": "Set decode_type to 'yolov5' or 'yolov7'. Set num_classes, num_anchors, and (if non-COCO) override the anchors[] table. Keep class_is_prob=false (raw logits).",
+
+    "version": 0.1,
+    "node_name": "simaai_boxdecode",
+    "system":   { "out_buf_queue": 1, "debug": 1, "dump_data": 0 },
+
+    "decode_type":  "yolov5",
+    "render_type":  "bbox",
+    "num_classes":  80,
+    "class_is_prob": false,
+    "num_anchors":   3,
+
+    "_doc_anchors": "Default = COCO P3/8 P4/16 P5/32. Override here only if your training used different anchors.",
+    "anchors": [
+        [[10,13],  [16,30],   [33,23]],
+        [[30,61],  [62,45],   [59,119]],
+        [[116,90], [156,198], [373,326]]
+    ],
+
+    "model_width":   640,
+    "model_height":  640,
+    "original_width":  1280,
+    "original_height": 720,
+
+    "detection_threshold": 0.5,
+    "nms_iou_threshold":   0.3,
+    "topk": 24,
+
+    "num_in_tensor": 3,
+    "_doc_input_depth": "Depth = num_anchors * (5 + num_classes). For na=3, nc=80 this is 255.",
+    "input_depth":  [255, 255, 255],
+    "input_height": [80,  40,  20],
+    "input_width":  [80,  40,  20],
+
+    "data_type": ["EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16"],
+    "dq_scale":  [1.0, 1.0, 1.0],
+    "dq_zp":     [0,   0,   0],
+
+    "buffers": {
+        "input":  [{ "name": "simaaiprocessdetessellate_1", "size": 4284000 }],
+        "output": { "size": 580 }
+    },
+
+    "memory":    { "cpu": 0, "next_cpu": 1 },
+    "batch_size": 1,
+    "caps": {
+        "sink_pads": [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "DETESSELLATE", "json_field": null }] }],
+        "src_pads":  [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "bbox",         "json_field": "render_type" }] }]
+    }
+}

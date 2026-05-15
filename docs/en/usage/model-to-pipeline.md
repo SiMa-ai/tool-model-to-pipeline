@@ -56,7 +56,7 @@ host-pc:~$ sima-cli sdk model
 🔧 Environment: host (linux)
 🖥️  Detected platform: Linux
 ✅ Docker daemon is running.
-▶ Executing command in container: vdp-cli-modelsdk-2.0.0_palette_sdk_master_b240
+▶ Executing command in container: vdp-cli-modelsdk-2.1.0_palette_sdk_master_b279
 =============================================================
  🚀 Welcome to the ModelSDK Container 
  
@@ -77,7 +77,7 @@ host-pc:~/workspace$ sima-cli sdk mpk
 🔧 Environment: host (linux)
 🖥️  Detected platform: Linux
 ✅ Docker daemon is running.
-▶ Executing command in container: vdp-cli-mpk_cli_toolset-2.0.0_palette_sdk_master_b240
+▶ Executing command in container: vdp-cli-mpk_cli_toolset-2.1.0_palette_sdk_master_b279
 =============================================================
  🚀 Welcome to the Palette SDK Container 
  

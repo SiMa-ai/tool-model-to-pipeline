@@ -60,9 +60,17 @@ def get_fps(
         prompt=False,
     ),
     models: str = typer.Option(..., help="List of model paths (comma-separated)"),
+    username: str = typer.Option(
+        "sima",
+        help="SSH username for the board",
+    ),
+    password: str = typer.Option(
+        "edgeai",
+        help="SSH password for the board",
+    ),
 ):
     """Finds the FPS number for MLA only using mla-rt"""
-    ssh = SSH(host=device_ip)
+    ssh = SSH(host=device_ip,username=username,password=password)
     resutls = []
     device_to_args_mapper = {
         "davinci": {

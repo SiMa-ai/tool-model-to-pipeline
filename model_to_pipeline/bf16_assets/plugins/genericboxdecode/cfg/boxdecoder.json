@@ -1,0 +1,223 @@
+{
+    "version": 0.1,
+    "system": {
+        "out_buf_queue": 1,
+        "debug": 1,
+        "dump_data": 0
+    },
+    "buffers": {
+        "input": [
+            {
+                "name": "simaaiprocessdetessellate_1",
+                "size": 1612800
+            }
+        ],
+        "output": {
+            "size": 580
+        }
+    },
+    "node_name": "simaai_boxdecode",
+    "_doc_decode_type": "yolov8 yolov9 yolov10 yolov11 yolov12 yolo26 (anchor-free, 6 tensors) | yolov5 yolov7 (anchor-based, 3 tensors) | yolox (3 tensors, no anchors) | yolov8-pose yolov11-pose | yolov8-seg yolov9-seg yolov10-seg yolov11-seg | yolov5-seg yolov7-seg",
+    "_doc_input_depth": "Anchor-free: [4 4 4 nc nc nc] for surgeoned cxcywh OR [64 64 64 nc nc nc] for raw DFL bins. Anchor-based v5/v7: [na*(5+nc), na*(5+nc), na*(5+nc)]. YOLOX: [4+1+nc, 4+1+nc, 4+1+nc].",
+    "_doc_class_is_prob": "true if model graph already applies sigmoid to class outputs (typical SiMa surgeon export); false if model emits raw logits.",
+    "_doc_templates": "Copy and adapt files from cfg/templates/ -- see cfg/MODELS.md for the full per-model matrix.",
+    "decode_type": "yolov11",
+    "render_type": "bbox",
+    "detection_threshold": 0.5,
+    "nms_iou_threshold": 0.3,
+    "topk": 24,
+    "num_classes": 80,
+    "class_is_prob": true,
+    "original_width": 1280,
+    "original_height": 720,
+    "num_in_tensor": 6,
+    "data_type": [
+        "EVXX_BFLOAT16",
+        "EVXX_BFLOAT16",
+        "EVXX_BFLOAT16",
+        "EVXX_BFLOAT16",
+        "EVXX_BFLOAT16",
+        "EVXX_BFLOAT16"
+    ],
+    "model_width": 640,
+    "model_height": 640,
+    "dq_scale": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+    ],
+    "dq_zp": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "input_depth": [
+        4,
+        4,
+        4,
+        80,
+        80,
+        80
+    ],
+    "input_height": [
+        80,
+        40,
+        20,
+        80,
+        40,
+        20
+    ],
+    "input_width": [
+        80,
+        40,
+        20,
+        80,
+        40,
+        20
+    ],
+    "slice_depth": [
+        4,
+        4,
+        4,
+        80,
+        80,
+        80
+    ],
+    "slice_height": [
+        16,
+        8,
+        4,
+        16,
+        8,
+        4
+    ],
+    "slice_width": [
+        4,
+        2,
+        1,
+        4,
+        2,
+        1
+    ],
+    "caps": {
+        "sink_pads": [
+            {
+        "media_type": "application/vnd.simaai.tensor",
+        "params": [
+          {
+            "name": "format",
+            "type": "string",
+            "values": "DETESSELLATE",
+            "json_field": null
+          }
+        ]
+      }
+        ],
+        "src_pads": [
+            {
+                "media_type": "application/vnd.simaai.tensor",
+                "params": [
+                    {
+                        "name": "format",
+                        "type": "string",
+                        "values": "bbox",
+                        "json_field": "render_type"
+                    }
+                ]
+            }
+        ]
+    },
+    "batch_size": 1,
+    "memory": {
+        "cpu": 0,
+        "next_cpu": 1
+    },
+    "labels": [
+        "person",
+        "bicycle",
+        "car",
+        "motorbike",
+        "aeroplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "bird",
+        "cat",
+        "dog",
+        "horse",
+        "sheep",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "backpack",
+        "umbrella",
+        "handbag",
+        "tie",
+        "suitcase",
+        "frisbee",
+        "skis",
+        "snowboard",
+        "sports ball",
+        "kite",
+        "baseball bat",
+        "baseball glove",
+        "skateboard",
+        "surfboard",
+        "tennis racket",
+        "bottle",
+        "wine glass",
+        "cup",
+        "fork",
+        "knife",
+        "spoon",
+        "bowl",
+        "banana",
+        "apple",
+        "sandwich",
+        "orange",
+        "broccoli",
+        "carrot",
+        "hot dog",
+        "pizza",
+        "donut",
+        "cake",
+        "chair",
+        "sofa",
+        "potted plant",
+        "bed",
+        "dining table",
+        "toilet",
+        "TV monitor",
+        "laptop",
+        "mouse",
+        "remote",
+        "keyboard",
+        "cell phone",
+        "microwave",
+        "oven",
+        "toaster",
+        "sink",
+        "refrigerator",
+        "book",
+        "clock",
+        "vase",
+        "scissors",
+        "teddy bear",
+        "hair drier",
+        "toothbrush"
+    ]
+}

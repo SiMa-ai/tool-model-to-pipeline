@@ -38,6 +38,23 @@ from model_to_pipeline.pipeline.pipeline_base import PipelineBase
 from model_to_pipeline.utils.process_util import execute_command
 import copy
 
+BF16_ASSETS_DIR = Path(__file__).resolve().parent.parent / "bf16_assets"
+
+
+def _bf16_decode_type(model_name: str) -> str:
+    """Map yaml model_name to the bf16 genericboxdecode `decode_type`.
+
+    Rule: insert 'v' after 'yolo' only when the next char is a digit and the
+    name does not already contain a 'v'. Names like 'yolov8', 'yolov11',
+    'yolox' or 'yolo26' pass through unchanged.
+    """
+    if not model_name:
+        return "yolov11"
+    name = model_name.lower()
+    if name.startswith("yolo") and len(name) > 4 and name[4].isdigit():
+        return "yolov" + name[4:]
+    return name
+
 
 class PipelineCreate(PipelineBase):
     """Pipeline for creating a new project with the compiled model.
@@ -324,11 +341,20 @@ class PipelineCreate(PipelineBase):
             plugin_zoo_path = Path(
                 "/usr/local/simaai/plugin_zoo/gst-simaai-plugins-base/gst/"
             )
-            plugins_to_copy = ["genericboxdecode", "overlay", "templates"]
+            is_bf16 = bool(getattr(args, "act_bf16", False))
+            if is_bf16:
+                logging.info(
+                    "act_bf16=true: using bf16 genericboxdecode from repo and replacing overlay with genericrender"
+                )
+                plugins_to_copy = ["genericboxdecode", "genericrender", "templates"]
+            else:
+                plugins_to_copy = ["genericboxdecode", "overlay", "templates"]
             for plugin in plugins_to_copy:
                 logging.info(f"Preparing plugin: {plugin}")
-                plugin_path = plugin_zoo_path / plugin
-                shutil.copytree
+                if is_bf16 and plugin == "genericboxdecode":
+                    plugin_path = BF16_ASSETS_DIR / "plugins" / "genericboxdecode"
+                else:
+                    plugin_path = plugin_zoo_path / plugin
                 shutil.copytree(
                     src=plugin_path,
                     dst=plugins_dir / plugin,
@@ -357,6 +383,12 @@ class PipelineCreate(PipelineBase):
                                 ]
                             },
                         )
+
+                    case "genericrender":
+                        # Render plugin replaces overlay in the bf16 pipeline.
+                        # labels.txt and render.json are populated in _apply_bf16_post.
+                        (plugins_dir / plugin / "cfg").mkdir(parents=True, exist_ok=True)
+                        (plugins_dir / plugin / "res").mkdir(parents=True, exist_ok=True)
 
                     case "overlay":
                         Path(plugins_dir / plugin / "res").mkdir(
@@ -431,6 +463,33 @@ class PipelineCreate(PipelineBase):
                             "model_path"
                         ] = f"/data/simaai/applications/{args.pipeline_name}/share/processmla/{model_file}"
 
+                if is_bf16:
+                    # bf16 preproc emits QUANTTESS-formatted tensors; the
+                    # compiled process_mla.json defaults to TESSELLATE, override.
+                    for pad in data.get("caps", {}).get("sink_pads", []):
+                        for param in pad.get("params", []):
+                            if (
+                                param.get("name") == "format"
+                                and param.get("values") == "TESSELLATE"
+                            ):
+                                param["values"] = "QUANTTESS"
+                    # The MLA output feeds the detessellate stage in bf16, so
+                    # src_pads should advertise MLA-format tensors (not
+                    # DETESSELLATE, which is what the boxdecoder sink reports).
+                    data["caps"]["src_pads"] = [
+                        {
+                            "media_type": "application/vnd.simaai.tensor",
+                            "params": [
+                                {
+                                    "name": "format",
+                                    "type": "string",
+                                    "values": "MLA",
+                                    "json_field": None,
+                                }
+                            ],
+                        }
+                    ]
+
                 # Updating actual process_mla.json
                 with open(
                     Path(plugins_dir)
@@ -482,6 +541,9 @@ class PipelineCreate(PipelineBase):
 
                 if args.rtsp_src:
                     preproc_config["input_buffers"][0]["name"] = "decoder"
+                    if is_bf16:
+                        # bf16 RTSP path takes NV12 directly from the decoder
+                        preproc_config["input_img_type"] = "NV12"
                 else:
                     preproc_config["input_buffers"][0]["name"] = "simaaipciesrc"
                     preproc_config["input_img_type"] = (
@@ -502,6 +564,28 @@ class PipelineCreate(PipelineBase):
                 ) as preproc_json:
                     json.dump(obj=preproc_config, fp=preproc_json, indent=4)
 
+                if is_bf16:
+                    # The detessellate stage between MLA and bf16 boxdecode
+                    # uses processcvu and reads modalix/cfg/0_detessellate.json
+                    detess_src = Path(temp_dir) / "0_detessellate.json"
+                    detess_dst = (
+                        Path(plugins_dir)
+                        / "processcvu"
+                        / device_type
+                        / "cfg"
+                        / "0_detessellate.json"
+                    )
+                    if detess_src.exists():
+                        logging.info(
+                            f"bf16: copying 0_detessellate.json to {detess_dst}"
+                        )
+                        shutil.copy(src=detess_src, dst=detess_dst)
+                    else:
+                        logging.warning(
+                            "bf16: 0_detessellate.json not found in compiled tar; "
+                            "simaaiprocessdetessellate_1 will be missing its config"
+                        )
+
                 # Updating boxdecoder.json to match input height and width
                 with open(
                     Path(plugins_dir) / "genericboxdecode" / "cfg" / "boxdecoder.json"
@@ -521,9 +605,20 @@ class PipelineCreate(PipelineBase):
                 boxdecoder_data["topk"] = args.topk
                 boxdecoder_data["buffers"]["output"]["size"] = int(4 + 24 * args.topk)
                 boxdecoder_data["num_classes"] = args.num_classes
-
                 boxdecoder_data["batch_size"] = 1
-                boxdecoder_data["memory"]["next_cpu"] = 1
+                # Add memory field if not present
+                if "memory" not in boxdecoder_data:
+                    logging.info("memory field not found in boxdecoder.json, adding default memory config")
+                    boxdecoder_data["memory"] = {
+                        "cpu": 0,
+                        "next_cpu": 1
+                    }
+
+                # Add node_name field if not present
+                if "node_name" not in boxdecoder_data:
+                    logging.info("node_name field not found in boxdecoder.json, adding default node_name")
+                    boxdecoder_data["node_name"] = "simaai_boxdecode"
+
                 delete_data = ["graph_name", "cpu", "next_cpu", "EVXX_DBG_DISABLED", 'debug','channel_of_interest']
                 for data in delete_data:
                     if data in boxdecoder_data:
@@ -552,6 +647,42 @@ class PipelineCreate(PipelineBase):
 
                 args.input_width = new_input_width
                 args.input_height = new_input_height
+
+                if is_bf16:
+                    # bf16 genericboxdecode consumes detessellated bf16 tensors.
+                    # Override decode_type per model_name, mark class outputs as
+                    # already-sigmoid (typical SiMa surgeon export) and rewire
+                    # the input buffer to the detessellate stage.
+                    decode_type = _bf16_decode_type(args.model_name)
+                    logging.info(
+                        f"bf16: setting boxdecoder decode_type={decode_type}"
+                    )
+                    boxdecoder_data["decode_type"] = decode_type
+                    boxdecoder_data["class_is_prob"] = True
+                    num_in_tensor = boxdecoder_data.get("num_in_tensor", 6)
+                    boxdecoder_data["data_type"] = ["EVXX_BFLOAT16"] * num_in_tensor
+                    if (
+                        boxdecoder_data.get("buffers", {}).get("input")
+                        and isinstance(boxdecoder_data["buffers"]["input"], list)
+                        and boxdecoder_data["buffers"]["input"]
+                    ):
+                        boxdecoder_data["buffers"]["input"][0]["name"] = (
+                            "simaaiprocessdetessellate_1"
+                        )
+                    # The bf16 plugin caps its input as DETESSELLATE tensor only
+                    boxdecoder_data["caps"]["sink_pads"] = [
+                        {
+                            "media_type": "application/vnd.simaai.tensor",
+                            "params": [
+                                {
+                                    "name": "format",
+                                    "type": "string",
+                                    "values": "DETESSELLATE",
+                                    "json_field": None,
+                                }
+                            ],
+                        }
+                    ]
 
                 with open(
                     Path(plugins_dir) / "genericboxdecode" / "cfg" / "boxdecoder.json",
@@ -606,42 +737,84 @@ class PipelineCreate(PipelineBase):
         Args:
             args (argparse.Namespace): Command line arguments.
         """
-        if args.no_box_decode:
-            postproc_block = f"! simaaiprocesscvu name=simaai_detesdequant_1 config=/data/simaai/applications/{args.pipeline_name}/etc/0_postproc.json "
-        else:
-            postproc_block = f"! simaaiboxdecode name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
+        is_bf16 = bool(getattr(args, "act_bf16", False))
 
         rtsp_src = args.rtsp_src if args.rtsp_src else "<RTSP_SRC>"
         host_ip = args.host_ip if args.host_ip else "<HOST_IP>"
         host_port = args.host_port if args.host_port else "<HOST_PORT>"
-        gst_cmd_rtsp = (
-            f"rtspsrc location={rtsp_src} "
-            "! rtph264depay wait-for-keyframe=true "
-            "! h264parse "
-            "! 'video/x-h264, parsed=true, stream-format=(string)byte-stream, alignment=(string)au, width=(int)[1,4096], height=(int)[1,4096]' "
-            "! simaaidecoder sima-allocator-type=2 name='decoder' next-element='CVU' "
-            "! tee name=source "
-            "! 'video/x-raw' "
-            f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
-            f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
-            f"! simaaiboxdecode name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
-            "! 'application/vnd.simaai.tensor' "
-            "! overlay. source. "
-            "! 'video/x-raw' "
-            f"! simaai-overlay2 name=overlay render-info='input::decoder,bbox::simaai_boxdecode' labels-file='/data/simaai/applications/{args.pipeline_name}/share/overlay/labels' "
-            "! simaaiencoder enc-bitrate=4000 name=encoder "
-            "! h264parse "
-            "! rtph264pay "
-            f"! udpsink host={host_ip} port={host_port}"
-            ""
-        )
-        gst_cmd_pcie = (
-            f"simaaipciesrc queue={args.qid} buffer-size={args.input_width * args.input_height * 3} "
-            f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
-            f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
-            f"{postproc_block}"
-            f"!  'application/vnd.simaai.tensor' ! simaaipciesink queue={args.qid} data-buffer-size={args.pcie_buffer_size}"
-        )
+
+        if is_bf16:
+            # bf16 path inserts an extra processcvu (detessellate) stage,
+            # uses the simaaiboxdecodebf16 element and renders via simaairender
+            postproc_block = (
+                "! simaaiprocesscvu name=simaaiprocessdetessellate_1 num-buffers=5 "
+                f"! simaaiboxdecodebf16 name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
+            )
+            render_block = (
+                "! simaai_render. source. "
+                "! queue2 "
+                "! simaairender name=simaai_render "
+                f"! capsfilter caps='video/x-raw,width=(int){args.input_width},height=(int){args.input_height},format=(string)NV12,framerate=(fraction)50/1' "
+            )
+            gst_cmd_rtsp = (
+                f"rtspsrc location={rtsp_src} "
+                "! rtph264depay wait-for-keyframe=true "
+                "! h264parse "
+                "! 'video/x-h264, parsed=true, stream-format=(string)byte-stream, alignment=(string)au, width=(int)[1,4096], height=(int)[1,4096]' "
+                "! simaaidecoder sima-allocator-type=2 name='decoder' next-element='CVU' "
+                "! tee name=source "
+                "! 'video/x-raw' "
+                f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
+                f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+                f"{postproc_block}"
+                "! 'application/vnd.simaai.tensor' "
+                f"{render_block}"
+                "! simaaiencoder enc-bitrate=4000 name=encoder "
+                "! h264parse "
+                "! rtph264pay "
+                f"! udpsink host={host_ip} port={host_port}"
+            )
+            gst_cmd_pcie = (
+                f"simaaipciesrc queue={args.qid} buffer-size={args.input_width * args.input_height * 3} "
+                f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
+                f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+                f"{postproc_block}"
+                f"!  'application/vnd.simaai.tensor' ! simaaipciesink queue={args.qid} data-buffer-size={args.pcie_buffer_size}"
+            )
+        else:
+            if args.no_box_decode:
+                postproc_block = f"! simaaiprocesscvu name=simaai_detesdequant_1 config=/data/simaai/applications/{args.pipeline_name}/etc/0_postproc.json "
+            else:
+                postproc_block = f"! simaaiboxdecode name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
+
+            gst_cmd_rtsp = (
+                f"rtspsrc location={rtsp_src} "
+                "! rtph264depay wait-for-keyframe=true "
+                "! h264parse "
+                "! 'video/x-h264, parsed=true, stream-format=(string)byte-stream, alignment=(string)au, width=(int)[1,4096], height=(int)[1,4096]' "
+                "! simaaidecoder sima-allocator-type=2 name='decoder' next-element='CVU' "
+                "! tee name=source "
+                "! 'video/x-raw' "
+                f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
+                f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+                f"! simaaiboxdecode name='simaai_boxdecode' config=/data/simaai/applications/{args.pipeline_name}/etc/boxdecoder.json "
+                "! 'application/vnd.simaai.tensor' "
+                "! overlay. source. "
+                "! 'video/x-raw' "
+                f"! simaai-overlay2 name=overlay render-info='input::decoder,bbox::simaai_boxdecode' labels-file='/data/simaai/applications/{args.pipeline_name}/share/overlay/labels' "
+                "! simaaiencoder enc-bitrate=4000 name=encoder "
+                "! h264parse "
+                "! rtph264pay "
+                f"! udpsink host={host_ip} port={host_port}"
+                ""
+            )
+            gst_cmd_pcie = (
+                f"simaaipciesrc queue={args.qid} buffer-size={args.input_width * args.input_height * 3} "
+                f"! simaaiprocesscvu name=simaai_preprocess num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_preproc.json "
+                f"! simaaiprocessmla multi-pipeline=true name=simaai_process_mla num-buffers=5 config=/data/simaai/applications/{args.pipeline_name}/etc/0_process_mla.json "
+                f"{postproc_block}"
+                f"!  'application/vnd.simaai.tensor' ! simaaipciesink queue={args.qid} data-buffer-size={args.pcie_buffer_size}"
+            )
         logging.info(f"GStreamer commands updated succesfully for pciesink buffer size. - {args.pcie_buffer_size}")
 
         application_json_path = Path(args.pipeline_name) / "application.json"
@@ -650,6 +823,12 @@ class PipelineCreate(PipelineBase):
 
         with open(application_json_path, "r") as file:
             application_json = json.load(file)
+
+        if is_bf16:
+            # Wire up genericrender (replaces overlay) and write render.json/labels
+            application_json = self._finalize_bf16_pipeline(
+                application_json=application_json, args=args
+            )
 
         logging.info("Updating application.json for multi device type structure")
         application_json = self.modify_application_json(
@@ -682,6 +861,178 @@ class PipelineCreate(PipelineBase):
             json.dump(application_json_pcie, file, indent=4)
 
         logging.info("GStreamer commands updated successfully.")
+
+    def _finalize_bf16_pipeline(
+        self, application_json: dict, args: argparse.Namespace
+    ) -> dict:
+        """Apply bf16-only finalization to application.json and write render assets.
+
+        - Adds a `simaai_render` plugin entry (pluginGid=genericrender).
+        - Adds genericrender to .project/pluginsInfo.json.
+        - Writes plugins/genericrender/cfg/render.json with proper buffer sizes
+          and the label_file path.
+        - Writes plugins/genericrender/res/labels.txt.
+        """
+        plugins_dir = Path(args.pipeline_name) / "plugins"
+        render_plugin_dir = plugins_dir / "genericrender"
+        (render_plugin_dir / "cfg").mkdir(parents=True, exist_ok=True)
+        (render_plugin_dir / "res").mkdir(parents=True, exist_ok=True)
+
+        # Labels: prefer user-provided file, else default YOLO-80 / generic class list
+        if args.labels_file:
+            with open(args.labels_file, "r") as f:
+                labels = [line.strip() for line in f.readlines() if line.strip()]
+        elif args.num_classes == 80:
+            labels = list(YOLO_80_LABELS)
+        else:
+            labels = [f"Class {i}" for i in range(args.num_classes)]
+
+        labels_dst = render_plugin_dir / "res" / "labels.txt"
+        with open(labels_dst, "w") as f:
+            f.write("\n".join(labels))
+
+        # NV12 buffer = W * H * 1.5; boxdecoder output buffer = 4 + 24 * topk
+        nv12_size = int(args.input_width * args.input_height * 3 / 2)
+        boxdecode_out_size = int(4 + 24 * args.topk)
+        label_file_on_target = (
+            f"/data/simaai/applications/{args.pipeline_name}/share/genericrender/labels.txt"
+        )
+        render_json = {
+            "version": "0.1",
+            "node_name": "simaai_render",
+            "memory": {"cpu": 0, "next_cpu": 0},
+            "system": {"out_buf_queue": 1, "debug": 0, "dump_data": 0},
+            "buffers": {
+                "input": [
+                    {"name": "simaai_boxdecode", "size": boxdecode_out_size},
+                    {"name": "decoder", "size": nv12_size},
+                ],
+                "output": {"size": nv12_size},
+            },
+            "image_buffer_name": "decoder",
+            "inference_buffer_name": "simaai_boxdecode",
+            "allowed_stream_id": "decoder",
+            "render_type": "bbox",
+            "image_format": "NV12",
+            "label_file": label_file_on_target,
+            "original_width": args.input_width,
+            "original_height": args.input_height,
+            "threshold": args.detection_threshold,
+            "color_box": [0, 255, 0],
+            "color_text": [30, 5, 100],
+            "class_special": 0,
+            "color_box_special": [200, 0, 0],
+            "debug": False,
+            "caps": {
+                "sink_pads": [
+                    {
+                        "media_type": "application/vnd.simaai.tensor",
+                        "params": [
+                            {
+                                "name": "format",
+                                "type": "string",
+                                "values": "bbox, bboxy, bboxt",
+                                "json_field": "render_type",
+                            }
+                        ],
+                    },
+                    {
+                        "media_type": "video/x-raw",
+                        "params": [
+                            {
+                                "name": "format",
+                                "type": "string",
+                                "values": "GRAY, RGB, BGR, I420, NV12",
+                                "json_field": "image_format",
+                            },
+                            {
+                                "name": "width",
+                                "type": "int",
+                                "values": "1 - 4096",
+                                "json_field": "original_width",
+                            },
+                            {
+                                "name": "height",
+                                "type": "int",
+                                "values": "1 - 4096",
+                                "json_field": "original_height",
+                            },
+                        ],
+                    },
+                ],
+                "src_pads": [
+                    {
+                        "media_type": "video/x-raw",
+                        "params": [
+                            {
+                                "name": "format",
+                                "type": "string",
+                                "values": "GRAY, RGB, BGR, I420, NV12",
+                                "json_field": "image_format",
+                            },
+                            {
+                                "name": "width",
+                                "type": "int",
+                                "values": "1 - 4096",
+                                "json_field": "original_width",
+                            },
+                            {
+                                "name": "height",
+                                "type": "int",
+                                "values": "1 - 4096",
+                                "json_field": "original_height",
+                            },
+                        ],
+                    }
+                ],
+            },
+        }
+        with open(render_plugin_dir / "cfg" / "render.json", "w") as f:
+            json.dump(render_json, f, indent=4)
+
+        plugins_list = application_json["pipelines"][0]["plugins"]
+
+        # `mpk project create` writes simaaiprocesstessellate_1 pointing at
+        # 0_tessellate.json, but the actual preproc file shipped from the
+        # compiled tar.gz is 0_preproc.json. Rewrite the reference for bf16.
+        for plugin in plugins_list:
+            if plugin.get("name") == "simaaiprocesstessellate_1":
+                configs = plugin.get("resources", {}).get("configs", [])
+                plugin["resources"]["configs"] = [
+                    cfg.replace("0_tessellate.json", "0_preproc.json")
+                    if isinstance(cfg, str)
+                    else cfg
+                    for cfg in configs
+                ]
+
+        # Add `simaai_render` plugin entry to application.json (matches working pipeline shape)
+        if not any(p.get("name") == "simaai_render" for p in plugins_list):
+            plugins_list.append(
+                {
+                    "name": "simaai_render",
+                    "pluginGid": "genericrender",
+                    "resources": {
+                        "configs": ["cfg/render.json"],
+                        "binaries": ["res/labels.txt"],
+                    },
+                }
+            )
+
+        # Add genericrender entry to .project/pluginsInfo.json
+        plugins_info_path = Path(args.pipeline_name) / ".project" / "pluginsInfo.json"
+        if plugins_info_path.exists():
+            with open(plugins_info_path, "r") as f:
+                plugins_info = json.load(f)
+            if not any(
+                p.get("gid") == "genericrender" for p in plugins_info.get("pluginsInfo", [])
+            ):
+                plugins_info["pluginsInfo"].append(
+                    {"gid": "genericrender", "path": "plugins/genericrender"}
+                )
+                with open(plugins_info_path, "w") as f:
+                    json.dump(plugins_info, f, indent=4)
+
+        return application_json
 
     def modify_application_json(self, application_json: dict) -> dict:
         plugins_to_modify = ["detesdequant", "gen_preproc", "process_mla"]

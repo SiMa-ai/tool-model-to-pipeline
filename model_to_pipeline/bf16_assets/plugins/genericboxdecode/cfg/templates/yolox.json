@@ -1,0 +1,45 @@
+{
+    "_template": "YOLOX detection (3 tensors, no anchors).",
+    "_when_to_use": "Use this for YOLOX exports. Each tensor channel-packs (4 + 1 + num_classes) values per cell: [tx ty tw th obj cls0..clsC-1]. Bbox decode is (tx+x)*S, (ty+y)*S, exp(tw)*S, exp(th)*S.",
+    "_change_per_model": "Set num_classes. Set class_is_prob=true if the export already applies sigmoid to obj and cls (typical when YOLOX is exported with --decode_in_inference); set false to have the plugin apply sigmoid internally.",
+
+    "version": 0.1,
+    "node_name": "simaai_boxdecode",
+    "system":   { "out_buf_queue": 1, "debug": 1, "dump_data": 0 },
+
+    "decode_type":  "yolox",
+    "render_type":  "bbox",
+    "num_classes":  80,
+    "class_is_prob": true,
+
+    "model_width":   640,
+    "model_height":  640,
+    "original_width":  1280,
+    "original_height": 720,
+
+    "detection_threshold": 0.5,
+    "nms_iou_threshold":   0.3,
+    "topk": 24,
+
+    "num_in_tensor": 3,
+    "_doc_input_depth": "Depth = 4 + 1 + num_classes. For nc=80 this is 85.",
+    "input_depth":  [85, 85, 85],
+    "input_height": [80, 40, 20],
+    "input_width":  [80, 40, 20],
+
+    "data_type": ["EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16"],
+    "dq_scale":  [1.0, 1.0, 1.0],
+    "dq_zp":     [0,   0,   0],
+
+    "buffers": {
+        "input":  [{ "name": "simaaiprocessdetessellate_1", "size": 1428000 }],
+        "output": { "size": 580 }
+    },
+
+    "memory":    { "cpu": 0, "next_cpu": 1 },
+    "batch_size": 1,
+    "caps": {
+        "sink_pads": [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "DETESSELLATE", "json_field": null }] }],
+        "src_pads":  [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "bbox",         "json_field": "render_type" }] }]
+    }
+}

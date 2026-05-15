@@ -1,6 +1,6 @@
 # SiMa.ai Model-to-Pipeline Toolkit 
 
-[![SDK Compatibility](https://img.shields.io/badge/SDK-2.0.0-blue.svg)](#) 
+[![SDK Compatibility](https://img.shields.io/badge/SDK-2.1.0-blue.svg)](#) 
 [![Models](https://img.shields.io/badge/Supported-YOLO-green.svg)](#) 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-orange.svg)](#) 
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](../LICENSE) 

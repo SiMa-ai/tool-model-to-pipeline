@@ -1,0 +1,44 @@
+{
+    "_template": "Anchor-free YOLO (v8 / v9 / v10 / v11 / v12 / yolo26) -- RAW DFL export (no graph surgery on bbox head).",
+    "_when_to_use": "Use this when the model still emits the 64 DFL bins per cell on the bbox head. The plugin runs softmax-EV per side internally and adds anchor + stride. Class outputs are typically still raw logits in this path -- set class_is_prob=false unless you are sure sigmoid is baked in.",
+    "_change_per_model": "Set decode_type to your exact family name and num_classes. Keep input_depth bbox channels = 64.",
+
+    "version": 0.1,
+    "node_name": "simaai_boxdecode",
+    "system":   { "out_buf_queue": 1, "debug": 1, "dump_data": 0 },
+
+    "decode_type":  "yolov8",
+    "render_type":  "bbox",
+    "num_classes":  80,
+    "class_is_prob": false,
+
+    "model_width":   640,
+    "model_height":  640,
+    "original_width":  1280,
+    "original_height": 720,
+
+    "detection_threshold": 0.5,
+    "nms_iou_threshold":   0.3,
+    "topk": 24,
+
+    "num_in_tensor": 6,
+    "input_depth":  [64, 64, 64, 80, 80, 80],
+    "input_height": [80, 40, 20, 80, 40, 20],
+    "input_width":  [80, 40, 20, 80, 40, 20],
+
+    "data_type": ["EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16","EVXX_BFLOAT16"],
+    "dq_scale":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "dq_zp":     [0,   0,   0,   0,   0,   0],
+
+    "buffers": {
+        "input":  [{ "name": "simaaiprocessdetessellate_1", "size": 2419200 }],
+        "output": { "size": 580 }
+    },
+
+    "memory":    { "cpu": 0, "next_cpu": 1 },
+    "batch_size": 1,
+    "caps": {
+        "sink_pads": [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "DETESSELLATE", "json_field": null }] }],
+        "src_pads":  [{ "media_type": "application/vnd.simaai.tensor", "params": [{ "name": "format", "type": "string", "values": "bbox",         "json_field": "render_type" }] }]
+    }
+}
