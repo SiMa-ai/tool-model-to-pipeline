@@ -83,7 +83,7 @@ class SurgeonYoloV8Seg(SurgeonBase):
         # automate the number of classes and input size
         H, W = imgz_size
 
-        model = oh.load_model(f"{model_name}.onnx")
+        model = oh.load_model(onnx_model)
 
         # Remove all outputs and reconstruct outputs.
         oh.remove_output(model)
