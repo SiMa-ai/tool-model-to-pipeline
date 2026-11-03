@@ -153,7 +153,7 @@ class SurgeonYoloV10(SurgeonBase):
         # automate the number of classes and input size
         H, W = imgz_size
 
-        model = oh.load_model(f"{model_name}.onnx", load_only=True)
+        model = oh.load_model(onnx_model, load_only=True)
 
         print("inside surgeon_yolo10.py")
 
